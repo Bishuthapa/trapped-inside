@@ -19791,5 +19791,5 @@ position = Vector2(177, 625)
 [node name="Enemy3" parent="Enemies" unique_id=1371725835 instance=ExtResource("6_rnqn2")]
 position = Vector2(890, 441)
 
-[node name="Effects" type="Node" parent="." unique_id=886177643]
+[node name="Effects" type="Node2D" parent="." unique_id=488624059]
 unique_name_in_owner = true
