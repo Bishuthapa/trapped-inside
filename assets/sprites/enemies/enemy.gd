@@ -1,0 +1,170 @@
+extends CharacterBody2D
+
+enum State {
+	IDLE,
+	CHASE,
+	RETURN,
+	ATTACK,
+	DEAD
+}
+
+@export_category("Stats")
+@export_category("Related Scenes")
+@export var death_packed: PackedScene
+@export var speed: int = 128
+@export var attack_damage: int = 10
+@export var attack_speed: float = 1.0
+@export var hitpoints:int = 180
+@export var aggro_range: float = 256.0
+@export var attack_range: float = 80.0
+@export_category("Related Scenes")
+
+var state: State = State.IDLE
+var previous_state: State = State.IDLE
+var _is_attacking: bool = false
+
+@onready var spawn_point: Vector2 = global_position
+@onready var animation_tree: AnimationTree = $AnimationTree
+@onready var animation_playback: AnimationNodeStateMachinePlayback = $AnimationTree ["parameters/playback"]
+@onready var player: CharacterBody2D = get_tree().get_first_node_in_group("player")
+
+@onready var nav_agent : NavigationAgent2D = $NavigationAgent2D
+
+func _ready() -> void:
+	animation_tree.set_active(true)
+	
+func _physics_process(_delta: float) -> void:
+	if state == State.DEAD:
+		return
+
+	var next_state: State = _determine_next_state()
+	if next_state != state:
+		_change_state(next_state)
+
+	match state:
+		State.IDLE:
+			velocity = Vector2.ZERO
+		State.CHASE, State.RETURN:
+			move()
+		State.ATTACK:
+			velocity = Vector2.ZERO
+
+	move_and_slide()
+
+	if state in [State.IDLE, State.CHASE, State.RETURN]:
+		if velocity.x < -0.01:
+			$Sprite2D.flip_h = true
+		elif velocity.x > 0.01:
+			$Sprite2D.flip_h = false
+
+
+func _determine_next_state() -> State:
+	if _is_attacking:
+		return State.ATTACK
+
+	if distance_to_player() <= attack_range:
+		return State.ATTACK
+
+	if distance_to_player() <= aggro_range:
+		return State.CHASE
+
+	if global_position.distance_to(spawn_point) > 32.0:
+		return State.RETURN
+
+	return State.IDLE
+
+
+func _change_state(new_state: State) -> void:
+	previous_state = state
+	state = new_state
+	update_animation()
+
+	if state == State.ATTACK:
+		attack()
+
+
+func distance_to_player() -> float:
+	return  global_position.distance_to(player.global_position)
+	
+	
+func attack() -> void:
+	if _is_attacking or state == State.DEAD:
+		return
+
+	_is_attacking = true
+
+	var player_pos:Vector2 = player.global_position
+	var attack_dir: Vector2 = (player_pos -	global_position).normalized()
+	$Sprite2D.flip_h = attack_dir.x < 0 and abs(attack_dir.x) >= abs(attack_dir.y)
+	animation_tree.set("parameters/attack/BlendSpace2D/blend_position", attack_dir)
+	
+	await get_tree().create_timer(attack_speed).timeout
+	_is_attacking = false
+
+	if state == State.DEAD:
+		return
+
+	var next_state: State = _state_after_attack()
+	if next_state != state:
+		_change_state(next_state)
+
+
+func _state_after_attack() -> State:
+	# Prefer returning to the previous locomotion state when still valid,
+	# otherwise re-evaluate from current world conditions.
+	if previous_state == State.CHASE and distance_to_player() <= aggro_range:
+		return State.CHASE
+
+	if previous_state == State.RETURN and global_position.distance_to(spawn_point) > 32.0:
+		return State.RETURN
+
+	if previous_state == State.IDLE:
+		return State.IDLE
+
+	return _determine_next_state()
+	
+
+func move() -> void:
+	if state == State.CHASE:
+		nav_agent.target_position = player.global_position
+	elif state == State.RETURN:
+		nav_agent.target_position = spawn_point
+	var next_path_position: Vector2 = nav_agent.get_next_path_position()
+	velocity =global_position.direction_to(next_path_position) * speed
+	
+	if nav_agent.avoidance_enabled:
+		nav_agent.set_velocity(velocity)
+	else:
+		_on_navigation_agent_2d_velocity_computed(velocity)
+
+func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
+	nav_agent.velocity = safe_velocity
+
+
+func update_animation() -> void:
+	match state:
+		State.IDLE:
+			animation_playback.travel("idle")
+		State.CHASE:
+			animation_playback.travel("run")
+		State.RETURN:
+			animation_playback.travel("run")
+		State.ATTACK:
+			animation_playback.travel("attack")
+
+func take_damage(damage_taken: int) -> void:
+	hitpoints -= damage_taken
+	if hitpoints <= 0:
+		death()
+
+
+func death() -> void:
+	_change_state(State.DEAD)
+	var death_scene : Node2D = death_packed.instantiate()
+	death_scene.position = global_position + Vector2(0.0,-32.0)
+	%Effects.add_child(death_scene)
+	queue_free()
+
+
+func _on_hit_box_area_entered(area: Area2D) -> void:
+	area.owner.take_damage(attack_damage)
