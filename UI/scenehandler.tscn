@@ -3,10 +3,8 @@
 [ext_resource type="Script" uid="uid://dhd8ed460kqb" path="res://UI/scenehandler.gd" id="1_vijth"]
 [ext_resource type="PackedScene" uid="uid://dd3vmae0e1vrj" path="res://UI/mainmenu.tscn" id="2_84f2w"]
 [ext_resource type="PackedScene" uid="uid://dj02rafn3nulo" path="res://scenes/levels/gamescene.tscn" id="3_vbrjv"]
-[ext_resource type="PackedScene" uid="uid://is6f5djrhesq" path="res://UI/pause.tscn" id="4_vbrjv"]
 
 [node name="scenehandler" type="Node" unique_id=1588278412]
 script = ExtResource("1_vijth")
 main_menu_packed = ExtResource("2_84f2w")
 game_scene_packed = ExtResource("3_vbrjv")
-pause_packed = ExtResource("4_vbrjv")

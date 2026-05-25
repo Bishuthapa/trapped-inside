@@ -390,7 +390,7 @@ neighbor_distance = 128.0
 max_speed = 128.0
 debug_enabled = true
 debug_use_custom = true
-debug_path_custom_color = Color(0.8745098, 0, 0.09019608, 1)
+debug_path_custom_color = Color(0.8745098, 0, 0.09019608, 0.0627451)
 
 [node name="HurtBox" type="Area2D" parent="." unique_id=1464262953]
 collision_layer = 16
