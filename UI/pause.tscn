@@ -7,6 +7,7 @@
 [ext_resource type="FontFile" uid="uid://c74rfgotxsab2" path="res://UI/PirataOne-Regular.ttf" id="4_0o46q"]
 [ext_resource type="AudioStream" uid="uid://cq7qlvl1jn6lv" path="res://sound/click.mp3" id="5_g74ew"]
 [ext_resource type="AudioStream" uid="uid://b0rtkp1ruc65x" path="res://sound/hover.mp3" id="6_25la5"]
+[ext_resource type="Script" uid="uid://bnxw4yo70q7tf" path="res://UI/h_slider_as_audio_controll.gd" id="7_audio"]
 
 [node name="pause" type="CanvasLayer" unique_id=1974091350]
 process_mode = 3
@@ -14,9 +15,9 @@ script = ExtResource("1_syi7u")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=514855155]
 offset_left = 650.0
-offset_top = 179.0
+offset_top = 120.0
 offset_right = 1150.0
-offset_bottom = 721.0
+offset_bottom = 780.0
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_constants/separation = 4
@@ -97,6 +98,57 @@ stream = ExtResource("6_25la5")
 volume_db = 5.045
 bus = &"sfx"
 
+[node name="AudioPanel" type="VBoxContainer" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AudioTitle" type="Label" parent="VBoxContainer/AudioPanel"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_0o46q")
+theme_override_font_sizes/font_size = 36
+text = "SOUND"
+horizontal_alignment = 1
+
+[node name="MusicRow" type="HBoxContainer" parent="VBoxContainer/AudioPanel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="MusicLabel" type="Label" parent="VBoxContainer/AudioPanel/MusicRow"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_0o46q")
+theme_override_font_sizes/font_size = 28
+text = "Music"
+
+[node name="MusicSlider" type="HSlider" parent="VBoxContainer/AudioPanel/MusicRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.05
+value = 1.0
+script = ExtResource("7_audio")
+audio_bus_name = "Music"
+
+[node name="SfxRow" type="HBoxContainer" parent="VBoxContainer/AudioPanel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="SfxLabel" type="Label" parent="VBoxContainer/AudioPanel/SfxRow"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("4_0o46q")
+theme_override_font_sizes/font_size = 28
+text = "SFX"
+
+[node name="SfxSlider" type="HSlider" parent="VBoxContainer/AudioPanel/SfxRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.05
+value = 1.0
+script = ExtResource("7_audio")
+audio_bus_name = "sfx"
+
 [node name="spacer" type="Control" parent="VBoxContainer" unique_id=1498838470]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
@@ -154,5 +206,7 @@ vertical_alignment = 1
 [connection signal="pressed" from="VBoxContainer/resume" to="." method="_on_resume_pressed"]
 [connection signal="mouse_entered" from="VBoxContainer/restart" to="." method="_on_restart_mouse_entered"]
 [connection signal="pressed" from="VBoxContainer/restart" to="." method="_on_restart_pressed"]
+[connection signal="value_changed" from="VBoxContainer/AudioPanel/MusicRow/MusicSlider" to="VBoxContainer/AudioPanel/MusicRow/MusicSlider" method="_on_value_changed"]
+[connection signal="value_changed" from="VBoxContainer/AudioPanel/SfxRow/SfxSlider" to="VBoxContainer/AudioPanel/SfxRow/SfxSlider" method="_on_value_changed"]
 [connection signal="mouse_entered" from="VBoxContainer/quit" to="." method="_on_quit_mouse_entered"]
 [connection signal="pressed" from="VBoxContainer/quit" to="." method="_on_quit_pressed"]
