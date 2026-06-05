@@ -12408,7 +12408,7 @@ position = Vector2(92, 58)
 
 [node name="Enemies" type="Node2D" parent="." unique_id=1998923370]
 
-[node name="Enemy" parent="Enemies" unique_id=1193440179 instance=ExtResource("7_thsdl")]
+[node name="Enemy1" parent="Enemies" unique_id=1193440179 instance=ExtResource("7_thsdl")]
 position = Vector2(790, 1195)
 
 [node name="Enemy2" parent="Enemies" unique_id=1727764120 instance=ExtResource("7_thsdl")]
