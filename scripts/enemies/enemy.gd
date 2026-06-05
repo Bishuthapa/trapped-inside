@@ -18,11 +18,15 @@ enum State {
 @export var max_hitpoints: int = 180
 @export var aggro_range: float = 400.0
 @export var attack_range: float = 80.0
+@export var knockback_force: float = 420.0
+@export var knockback_duration: float = 0.15
 @export_category("Related Scenes")
 
 var state: State = State.IDLE
 var previous_state: State = State.IDLE
 var _is_attacking: bool = false
+var _knockback_velocity: Vector2 = Vector2.ZERO
+var _knockback_time: float = 0.0
 
 
 @onready var spawn_point: Vector2 = global_position
@@ -58,10 +62,26 @@ func _get_effects_node() -> Node2D:
 	return null
 
 
+func configure_as_boss(extra_hp: int = 200, scale_factor: float = 1.3) -> void:
+	max_hitpoints += extra_hp
+	hitpoints = max_hitpoints
+	health_bar.max_value = max_hitpoints
+	health_bar.value = hitpoints
+	scale = Vector2.ONE * scale_factor
+
+
 func _physics_process(_delta: float) -> void:
 	if not is_instance_valid(self):
 		return
 	if state == State.DEAD:
+		return
+
+	if _knockback_time > 0.0:
+		_knockback_time = maxf(_knockback_time - _delta, 0.0)
+		velocity = _knockback_velocity
+		move_and_slide()
+		if _knockback_time <= 0.0:
+			_knockback_velocity = Vector2.ZERO
 		return
 
 	var next_state: State = _determine_next_state()
@@ -194,12 +214,37 @@ func update_animation() -> void:
 		State.ATTACK:
 			animation_playback.travel("attack")
 
-func take_damage(damage_taken: int) -> void:
+func take_damage(damage_taken: int, source_pos: Vector2 = Vector2.INF) -> void:
+	if state == State.DEAD:
+		return
 	hitpoints -= damage_taken
 	hitpoints = clamp(hitpoints, 0, max_hitpoints)
 	health_bar.value = hitpoints
+	_apply_knockback(source_pos)
+	_flash_hit()
 	if hitpoints <= 0:
 		death()
+
+
+func _apply_knockback(source_pos: Vector2) -> void:
+	if source_pos == Vector2.INF:
+		return
+	var direction := (global_position - source_pos).normalized()
+	if direction == Vector2.ZERO:
+		direction = Vector2.RIGHT
+	_knockback_velocity = direction * knockback_force
+	_knockback_time = knockback_duration
+
+
+func _flash_hit() -> void:
+	var sprite := $Sprite2D
+	if sprite == null:
+		return
+	var original: Color = sprite.modulate
+	sprite.modulate = Color(1.5, 0.6, 0.6)
+	await get_tree().create_timer(0.08).timeout
+	if is_instance_valid(sprite):
+		sprite.modulate = original
 
 
 func death() -> void:

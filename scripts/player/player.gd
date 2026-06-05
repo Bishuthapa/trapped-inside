@@ -1,6 +1,8 @@
 extends CharacterBody2D
 
 signal update_hp_bar(hp_bar_value: int)
+signal attack_cooldown_changed(ready_ratio: float)
+signal dash_cooldown_changed(ready_ratio: float)
 
 enum State {
 	IDLE,
@@ -12,7 +14,11 @@ enum State {
 @export_category("Stats")
 @export var speed: int = 400
 @export var attack_speed: float = 0.6
-@export var attack_damage: int = 60
+@export var attack_damage: int = 180
+@export var attack_cooldown: float = 0.85
+@export var dash_speed: int = 900
+@export var dash_duration: float = 0.18
+@export var dash_cooldown: float = 1.2
 
 const INVULNERABILITY_TIME: float = 2.0
 
@@ -24,6 +30,13 @@ var hitpoint_max: int = PlayerDataService.MAX_HP
 var spawn_position: Vector2
 var _is_respawning: bool = false
 var _invulnerable: bool = false
+var _is_dashing: bool = false
+var _dash_direction: Vector2 = Vector2.ZERO
+var _dash_time_left: float = 0.0
+var _attack_cooldown_left: float = 0.0
+var _dash_cooldown_left: float = 0.0
+var _attack_was_on_cooldown: bool = false
+var _dash_was_on_cooldown: bool = false
 
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var animation_playback: AnimationNodeStateMachinePlayback = $AnimationTree["parameters/playback"]
@@ -37,6 +50,8 @@ func _ready() -> void:
 	animation_tree.active = true
 	if not _player_data.hp_changed.is_connected(_on_player_data_hp_changed):
 		_player_data.hp_changed.connect(_on_player_data_hp_changed)
+	attack_cooldown_changed.emit(1.0)
+	dash_cooldown_changed.emit(1.0)
 
 
 func sync_from_player_data() -> void:
@@ -53,17 +68,51 @@ func _emit_hp_bar() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if state == State.DEAD or _is_respawning:
+	if state == State.DEAD or _is_respawning or _is_dashing:
+		return
+	if event.is_action_pressed("dash"):
+		try_dash()
+		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		attack()
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
+	_update_cooldowns(delta)
 	if state == State.DEAD or _is_respawning:
+		return
+	if _is_dashing:
+		_process_dash(delta)
 		return
 	if state != State.ATTACK:
 		movement_loop()
+
+
+func _process_dash(delta: float) -> void:
+	velocity = _dash_direction * dash_speed
+	move_and_slide()
+	_dash_time_left -= delta
+	if _dash_time_left <= 0.0:
+		_end_dash()
+
+
+func _update_cooldowns(delta: float) -> void:
+	if _attack_cooldown_left > 0.0:
+		_attack_was_on_cooldown = true
+		_attack_cooldown_left = maxf(_attack_cooldown_left - delta, 0.0)
+		attack_cooldown_changed.emit(1.0 - _attack_cooldown_left / attack_cooldown)
+	elif _attack_was_on_cooldown:
+		_attack_was_on_cooldown = false
+		attack_cooldown_changed.emit(1.0)
+
+	if _dash_cooldown_left > 0.0:
+		_dash_was_on_cooldown = true
+		_dash_cooldown_left = maxf(_dash_cooldown_left - delta, 0.0)
+		dash_cooldown_changed.emit(1.0 - _dash_cooldown_left / dash_cooldown)
+	elif _dash_was_on_cooldown:
+		_dash_was_on_cooldown = false
+		dash_cooldown_changed.emit(1.0)
 
 
 func movement_loop() -> void:
@@ -98,11 +147,45 @@ func update_animation() -> void:
 			animation_playback.travel("attack")
 
 
+func try_dash() -> void:
+	if _is_dashing or _dash_cooldown_left > 0.0 or state == State.ATTACK:
+		return
+
+	var dash_direction := move_direction
+	if dash_direction == Vector2.ZERO:
+		dash_direction = Vector2.LEFT if $Sprite2D.flip_h else Vector2.RIGHT
+
+	_start_dash(dash_direction.normalized())
+
+
+func _start_dash(direction: Vector2) -> void:
+	_is_dashing = true
+	_invulnerable = true
+	_dash_direction = direction
+	_dash_time_left = dash_duration
+
+	if direction.x < 0:
+		$Sprite2D.flip_h = true
+	elif direction.x > 0:
+		$Sprite2D.flip_h = false
+
+
+func _end_dash() -> void:
+	_is_dashing = false
+	_invulnerable = false
+	velocity = Vector2.ZERO
+	_dash_cooldown_left = dash_cooldown
+	_dash_was_on_cooldown = true
+	dash_cooldown_changed.emit(0.0)
+
+
 func attack() -> void:
-	if state == State.ATTACK or _is_respawning:
+	if state == State.ATTACK or _is_respawning or _attack_cooldown_left > 0.0:
 		return
 
 	state = State.ATTACK
+	_attack_cooldown_left = attack_cooldown
+	attack_cooldown_changed.emit(0.0)
 
 	var mouse_pos: Vector2 = get_global_mouse_position()
 	var attck_dir: Vector2 = (mouse_pos - global_position).normalized()
@@ -124,7 +207,7 @@ func attack() -> void:
 
 
 func take_damage(damage_taken: int) -> void:
-	if _invulnerable or state == State.DEAD or _is_respawning:
+	if _invulnerable or state == State.DEAD or _is_respawning or _is_dashing:
 		return
 	_player_data.take_damage(damage_taken)
 
@@ -169,4 +252,4 @@ func _enter_game_over_state() -> void:
 
 func _on_hit_box_area_entered(area: Area2D) -> void:
 	if area.owner and area.owner.has_method("take_damage"):
-		area.owner.take_damage(attack_damage)
+		area.owner.take_damage(attack_damage, global_position)
