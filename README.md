@@ -1,16 +1,16 @@
-# 🎮 Trapped Inside
+#  Trapped Inside
 
 > A 2D game built with **Godot Engine 4.6** and written entirely in **GDScript**.
 
 ---
 
-## 📖 About
+##  About
 
 **Trapped Inside** is a Godot 4.6 game project developed by [Bishuthapa](https://github.com/Bishuthapa). The project uses Godot's GL Compatibility renderer, making it suitable for a wide range of hardware including mobile and lower-end desktops.
 
 ---
 
-## 🗂️ Project Structure
+##  Project Structure
 
 ```
 trapped-inside/
@@ -25,7 +25,7 @@ trapped-inside/
 
 ---
 
-## ⚙️ Technical Details
+##  Technical Details
 
 | Property            | Value                          |
 |---------------------|-------------------------------|
@@ -36,7 +36,7 @@ trapped-inside/
 | **Config Version**  | 5                              |
 | **Windows Renderer**| Direct3D 12 (d3d12)           |
 
-## 🎮 Controls
+##  Controls
 
 | Action | Key |
 |--------|-----|
@@ -50,7 +50,7 @@ trapped-inside/
 **To attack in the direction you want, move the mouse toward the desired direction and press the left mouse button.**
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -70,11 +70,23 @@ trapped-inside/
    - Select `project.godot` and click **Import & Edit**.
 
 3. **Run the game:**
-   - Press **F5** or click the ▶ Play button to run the main scene.
+   - Press **F5** or click the  Play button to run the main scene.
 
+
+   ----------------OR----------------<br/>
+   <br/>
+   ##Run the server
+   Just go to the folder `build -> web`
+   and open the terminal in `trapped-inside\build\web` dir
+   then run the server <br/>
+   ```bash
+    python -m server.http 8000
+   ```
+   then open the web browser and paste  `localhost:8000` to the url.
+   
 ---
 
-## 🛠️ Development
+## Development
 
 ### Folder Conventions
 
@@ -91,7 +103,7 @@ trapped-inside/
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository.
 2. Create a feature branch: `git checkout -b feature/your-feature-name`
@@ -101,16 +113,16 @@ trapped-inside/
 
 ---
 
-## 📄 License
+##  License
 
 This project does not currently specify a license. Please contact me before using or distributing this project.
 
 ---
 
-## 👤 Author
+##  Author
 
 **Bishuthapa** — [@Bishuthapa](https://github.com/Bishuthapa)
 
 ---
 
-*Made with ❤️ using [Godot Engine](https://godotengine.org/)*
+*Made with using [Godot Engine](https://godotengine.org/)*
