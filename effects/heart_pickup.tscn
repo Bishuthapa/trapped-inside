@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://bplemhngrpujn"]
+
+[ext_resource type="Script" path="res://effects/heart_pickup.gd" id="1_hpick"]
+[ext_resource type="Texture2D" uid="uid://gspfi1l6yu65" path="res://assets/tilesets/heart pixel art 32x32.png" id="2_hpick"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hpick"]
+radius = 26.0
+
+[node name="HeartPickup" type="Area2D"]
+collision_layer = 0
+collision_mask = 3
+script = ExtResource("1_hpick")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_hpick")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_hpick")

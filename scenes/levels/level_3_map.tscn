@@ -12423,5 +12423,17 @@ position = Vector2(1398, 949)
 [node name="Enemy5" parent="Enemies" unique_id=546271929 instance=ExtResource("7_thsdl")]
 position = Vector2(1986, 923)
 
+[node name="Enemy6" parent="Enemies" unique_id=1216539031 instance=ExtResource("7_thsdl")]
+position = Vector2(1986, 923)
+
+[node name="Enemy7" parent="Enemies" unique_id=55110335 instance=ExtResource("7_thsdl")]
+position = Vector2(1986, 923)
+
+[node name="Enemy8" parent="Enemies" unique_id=230111076 instance=ExtResource("7_thsdl")]
+position = Vector2(1986, 923)
+
+[node name="Enemy9" parent="Enemies" unique_id=989221587 instance=ExtResource("7_thsdl")]
+position = Vector2(1986, 923)
+
 [node name="Effects" type="Node2D" parent="." unique_id=488624059]
 unique_name_in_owner = true

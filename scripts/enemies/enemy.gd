@@ -9,18 +9,22 @@ enum State {
 }
 
 @export_category("Stats")
-@export_category("Related Scenes")
-@export var death_packed: PackedScene
 @export var speed: int = 128
 @export var attack_damage: int = 30
 @export var attack_speed: float = 1.0
 @export var hitpoints:int = 180
 @export var max_hitpoints: int = 180
-@export var aggro_range: float = 400.0
+@export var aggro_range: float = 650.0
 @export var attack_range: float = 80.0
 @export var knockback_force: float = 420.0
 @export var knockback_duration: float = 0.15
+@export var heart_drop_chance: float = 0.3
 @export_category("Related Scenes")
+@export var death_packed: PackedScene
+@export var attack_sfx: AudioStream
+@export var is_large_enemy: bool = false
+
+const HEART_PICKUP_SCENE: PackedScene = preload("res://effects/heart_pickup.tscn")
 
 var state: State = State.IDLE
 var previous_state: State = State.IDLE
@@ -62,12 +66,14 @@ func _get_effects_node() -> Node2D:
 	return null
 
 
-func configure_as_boss(extra_hp: int = 200, scale_factor: float = 1.3) -> void:
+func configure_as_boss(extra_hp: int = 200, scale_factor: float = 1.3, extra_damage: int = 0) -> void:
 	max_hitpoints += extra_hp
 	hitpoints = max_hitpoints
 	health_bar.max_value = max_hitpoints
 	health_bar.value = hitpoints
 	scale = Vector2.ONE * scale_factor
+	attack_damage += extra_damage
+	is_large_enemy = true
 
 
 func _physics_process(_delta: float) -> void:
@@ -151,7 +157,9 @@ func attack() -> void:
 	var attack_dir: Vector2 = (player_pos - global_position).normalized()
 	$Sprite2D.flip_h = attack_dir.x < 0 and abs(attack_dir.x) >= abs(attack_dir.y)
 	animation_tree.set("parameters/attack/BlendSpace2D/blend_position", attack_dir)
-	
+	_telegraph_attack()
+	_play_attack_sfx()
+
 	await get_tree().create_timer(attack_speed).timeout
 	if not is_instance_valid(self):
 		return
@@ -240,11 +248,33 @@ func _flash_hit() -> void:
 	var sprite := $Sprite2D
 	if sprite == null:
 		return
-	var original: Color = sprite.modulate
 	sprite.modulate = Color(1.5, 0.6, 0.6)
 	await get_tree().create_timer(0.08).timeout
 	if is_instance_valid(sprite):
-		sprite.modulate = original
+		sprite.modulate = Color.WHITE
+
+
+func _telegraph_attack() -> void:
+	# Brief yellow wind-up tint so the player can read the incoming swing.
+	var sprite := $Sprite2D
+	if sprite == null:
+		return
+	sprite.modulate = Color(1.4, 1.3, 0.5)
+	await get_tree().create_timer(0.2).timeout
+	if is_instance_valid(sprite):
+		sprite.modulate = Color.WHITE
+
+
+func _play_attack_sfx() -> void:
+	if attack_sfx == null:
+		return
+	var sfx_player := AudioStreamPlayer2D.new()
+	sfx_player.stream = attack_sfx
+	sfx_player.bus = "sfx"
+	get_tree().current_scene.add_child(sfx_player)
+	sfx_player.global_position = global_position
+	sfx_player.finished.connect(sfx_player.queue_free)
+	sfx_player.play()
 
 
 func death() -> void:
@@ -260,11 +290,28 @@ func death() -> void:
 	if effects:
 		effects.add_child(death_scene)
 		death_scene.global_position = death_pos + Vector2(0.0, -32.0)
+		_maybe_drop_heart(effects, death_pos)
 	else:
 		push_warning("Effects node not found; could not spawn enemy death VFX.")
 
+	_trigger_kill_hitstop()
 	queue_free()
 
 
+func _maybe_drop_heart(effects: Node2D, drop_pos: Vector2) -> void:
+	if randf() >= heart_drop_chance:
+		return
+	var heart := HEART_PICKUP_SCENE.instantiate() as Area2D
+	effects.add_child(heart)
+	heart.global_position = drop_pos + Vector2(0.0, -16.0)
+
+
+func _trigger_kill_hitstop() -> void:
+	var juice: Node = get_node_or_null("/root/Juice")
+	if juice:
+		juice.kill_hitstop()
+
+
 func _on_hit_box_area_entered(area: Area2D) -> void:
-	area.owner.take_damage(attack_damage)
+	if area.owner and area.owner.has_method("take_damage"):
+		area.owner.take_damage(attack_damage)

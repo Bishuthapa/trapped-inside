@@ -9,6 +9,7 @@ const LOADING_MESSAGES: Dictionary = {
 	"level_2_map.tscn": "Level 2: The Deep Halls — Deeper inside. The air gets colder.",
 	"level_3_map.tscn": "Level 3: Final Chamber — One last room. Find a way out.",
 }
+const FLOOR_TINT: Color = Color(1.08, 1.05, 0.98, 1.0)
 
 @onready var HUD: Control = $UI/HUD
 @onready var _pause_menu: CanvasLayer = $UI/pause
@@ -26,6 +27,7 @@ func _ready() -> void:
 	_start_game_music()
 	_player_data.game_over.connect(_on_game_over)
 	current_level = _find_level_node()
+	_apply_floor_tint(current_level)
 	_connect_player_to_hud()
 	_connect_level_events()
 
@@ -97,6 +99,7 @@ func _swap_level(level_scene_path: String) -> void:
 	current_level = level_scene.instantiate()
 	add_child(current_level)
 	move_child(current_level, 0)
+	_apply_floor_tint(current_level)
 
 	await get_tree().process_frame
 	_connect_player_to_hud()
@@ -130,6 +133,14 @@ func _find_level_node() -> Node2D:
 		if child is Node2D:
 			return child
 	return null
+
+
+func _apply_floor_tint(level: Node) -> void:
+	if level == null:
+		return
+	var floor_layer := level.get_node_or_null("floor") as TileMapLayer
+	if floor_layer:
+		floor_layer.modulate = FLOOR_TINT
 
 
 func _connect_player_to_hud() -> void:

@@ -21,6 +21,12 @@ enum State {
 @export var dash_cooldown: float = 1.2
 
 const INVULNERABILITY_TIME: float = 2.0
+const HURT_FLASH_COLOR: Color = Color(1.5, 0.5, 0.5)
+const SWORD_SWING_SFX: AudioStream = preload("res://assets/audio/sfx/sword_swing.mp3")
+const NORMAL_ENEMY_HIT_SFX: AudioStream = preload("res://assets/audio/sfx/normal_enemy_hit.mp3")
+const LARGE_ENEMY_HIT_SFX: AudioStream = preload("res://assets/audio/sfx/large_enemy_hit.mp3")
+const SWORD_SLICE_SFX: AudioStream = preload("res://assets/audio/sfx/sword_slice.mp3")
+const DEATH_SCENE: PackedScene = preload("res://assets/effects/death.tscn")
 
 var state: State = State.IDLE
 var move_direction: Vector2 = Vector2.ZERO
@@ -186,6 +192,7 @@ func attack() -> void:
 	state = State.ATTACK
 	_attack_cooldown_left = attack_cooldown
 	attack_cooldown_changed.emit(0.0)
+	_play_sfx(SWORD_SWING_SFX)
 
 	var mouse_pos: Vector2 = get_global_mouse_position()
 	var attck_dir: Vector2 = (mouse_pos - global_position).normalized()
@@ -210,6 +217,45 @@ func take_damage(damage_taken: int) -> void:
 	if _invulnerable or state == State.DEAD or _is_respawning or _is_dashing:
 		return
 	_player_data.take_damage(damage_taken)
+	if _player_data.hitpoints <= 0:
+		_play_sfx(SWORD_SLICE_SFX)
+	else:
+		_play_sfx(NORMAL_ENEMY_HIT_SFX)
+	_flash_hurt()
+	_shake_camera()
+
+
+func _flash_hurt() -> void:
+	var sprite := $Sprite2D
+	var original: Color = Color.WHITE
+	sprite.modulate = HURT_FLASH_COLOR
+	await get_tree().create_timer(0.1).timeout
+	if is_instance_valid(sprite):
+		sprite.modulate = original
+
+
+func _shake_camera(strength: float = 6.0, duration: float = 0.18) -> void:
+	var camera := $Camera2D as Camera2D
+	if camera == null:
+		return
+	var tween := create_tween()
+	var steps := 4
+	for i in steps:
+		var fade := 1.0 - float(i) / steps
+		var offset := Vector2(randf_range(-1, 1), randf_range(-1, 1)) * strength * fade
+		tween.tween_property(camera, "offset", offset, duration / steps)
+	tween.tween_property(camera, "offset", Vector2.ZERO, duration / steps)
+
+
+func _play_sfx(stream: AudioStream) -> void:
+	if stream == null:
+		return
+	var sfx_player := AudioStreamPlayer.new()
+	sfx_player.stream = stream
+	sfx_player.bus = "sfx"
+	add_child(sfx_player)
+	sfx_player.finished.connect(sfx_player.queue_free)
+	sfx_player.play()
 
 
 func _on_player_data_hp_changed(new_hp: int, max_hp: int) -> void:
@@ -239,17 +285,56 @@ func respawn() -> void:
 	global_position = spawn_position
 	sync_from_player_data()
 	update_animation()
+	_blink_while_invulnerable()
 	await get_tree().create_timer(INVULNERABILITY_TIME).timeout
 	if is_instance_valid(self):
 		_invulnerable = false
 		_is_respawning = false
 
 
+func _blink_while_invulnerable() -> void:
+	var sprite := $Sprite2D
+	var blink := create_tween()
+	blink.set_loops(int(INVULNERABILITY_TIME / 0.3))
+	blink.tween_property(sprite, "modulate:a", 0.35, 0.15)
+	blink.tween_property(sprite, "modulate:a", 1.0, 0.15)
+	blink.finished.connect(func() -> void:
+		if is_instance_valid(sprite):
+			sprite.modulate.a = 1.0)
+
+
 func _enter_game_over_state() -> void:
+	if state == State.DEAD:
+		return
 	state = State.DEAD
 	velocity = Vector2.ZERO
+	animation_tree.active = false
+	$Sprite2D.visible = false
+	# Stop enemies from targeting and hitting the corpse.
+	remove_from_group("player")
+	$HurtBox.set_deferred("monitorable", false)
+	$HitBox.set_deferred("monitoring", false)
+	_spawn_death_skull()
+
+
+func _spawn_death_skull() -> void:
+	var skull := DEATH_SCENE.instantiate()
+	skull.persist_last_frame = true
+	# Game-over pauses the tree right before this spawns — keep the skull
+	# animating through the pause.
+	skull.process_mode = Node.PROCESS_MODE_ALWAYS
+	get_parent().add_child(skull)
+	skull.global_position = global_position + Vector2(0.0, -32.0)
 
 
 func _on_hit_box_area_entered(area: Area2D) -> void:
 	if area.owner and area.owner.has_method("take_damage"):
-		area.owner.take_damage(attack_damage, global_position)
+		var target: Node = area.owner
+		target.take_damage(attack_damage, global_position)
+		var is_fatal: bool = is_instance_valid(target) and "hitpoints" in target and target.hitpoints <= 0
+		if is_fatal:
+			_play_sfx(SWORD_SLICE_SFX)
+		elif "is_large_enemy" in target and target.is_large_enemy:
+			_play_sfx(LARGE_ENEMY_HIT_SFX)
+		else:
+			_play_sfx(NORMAL_ENEMY_HIT_SFX)

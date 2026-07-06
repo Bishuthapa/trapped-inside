@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://b1t3n2a83nss6" path="res://assets/effects/death.tscn" id="2_s4grb"]
 [ext_resource type="Texture2D" uid="uid://dvhh2uiu7y7m4" path="res://assets/sprites/enemies/Torch_Red.png" id="3_gv1lv"]
 [ext_resource type="Texture2D" uid="uid://btdh68t10ifd3" path="res://UI/Banners/Carved_3Slides.png" id="3_s4grb"]
+[ext_resource type="AudioStream" path="res://assets/audio/sfx/goblin_fire_attack.wav" id="4_fireatk"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_onrkg"]
 radius = 29.017237
@@ -318,24 +319,6 @@ _data = {
 &"run": SubResource("Animation_rugve")
 }
 
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_s4grb"]
-animation = &"Attack_left"
-
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_maxnv"]
-animation = &"Attack_down"
-
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_4i7ht"]
-animation = &"attack_down"
-
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_w07lc"]
-animation = &"attack_up"
-
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_56k1v"]
-animation = &"Attack_up"
-
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_dseqo"]
-animation = &"Attack_right"
-
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_dwl8l"]
 animation = &"attack_left"
 
@@ -348,37 +331,15 @@ animation = &"attack_up"
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_5ann7"]
 animation = &"attack_right"
 
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_i17b2"]
-animation = &"attack_right"
-
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_a2dsu"]
-animation = &"attack_left"
-
 [sub_resource type="AnimationNodeBlendSpace2D" id="AnimationNodeBlendSpace2D_dwl8l"]
-blend_point_0/node = SubResource("AnimationNodeAnimation_s4grb")
+blend_point_0/node = SubResource("AnimationNodeAnimation_dwl8l")
 blend_point_0/pos = Vector2(-1, 0)
-blend_point_1/node = SubResource("AnimationNodeAnimation_maxnv")
-blend_point_1/pos = Vector2(0, 1)
-blend_point_2/node = SubResource("AnimationNodeAnimation_56k1v")
-blend_point_2/pos = Vector2(0, -0.90000004)
-blend_point_3/node = SubResource("AnimationNodeAnimation_dseqo")
-blend_point_3/pos = Vector2(1, 0)
-blend_point_4/node = SubResource("AnimationNodeAnimation_dwl8l")
-blend_point_4/pos = Vector2(-1, 0)
-blend_point_5/node = SubResource("AnimationNodeAnimation_rugve")
-blend_point_5/pos = Vector2(0, 1)
-blend_point_6/node = SubResource("AnimationNodeAnimation_uv0tj")
-blend_point_6/pos = Vector2(0, -0.90000004)
-blend_point_7/node = SubResource("AnimationNodeAnimation_5ann7")
-blend_point_7/pos = Vector2(1, 0)
-blend_point_8/node = SubResource("AnimationNodeAnimation_i17b2")
-blend_point_8/pos = Vector2(1, 0)
-blend_point_9/node = SubResource("AnimationNodeAnimation_a2dsu")
-blend_point_9/pos = Vector2(-1, 0)
-blend_point_10/node = SubResource("AnimationNodeAnimation_4i7ht")
-blend_point_10/pos = Vector2(0, 1)
-blend_point_11/node = SubResource("AnimationNodeAnimation_w07lc")
-blend_point_11/pos = Vector2(0, -0.90000004)
+blend_point_1/node = SubResource("AnimationNodeAnimation_5ann7")
+blend_point_1/pos = Vector2(1, 0)
+blend_point_2/node = SubResource("AnimationNodeAnimation_rugve")
+blend_point_2/pos = Vector2(0, 1)
+blend_point_3/node = SubResource("AnimationNodeAnimation_uv0tj")
+blend_point_3/pos = Vector2(0, -1)
 blend_mode = 1
 
 [sub_resource type="AnimationNodeTimeScale" id="AnimationNodeTimeScale_rugve"]
@@ -434,7 +395,9 @@ size = Vector2(10.75, 42.975002)
 collision_layer = 2
 collision_mask = 2
 script = ExtResource("1_abxm6")
+aggro_range = 450.0
 death_packed = ExtResource("2_s4grb")
+attack_sfx = ExtResource("4_fireatk")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1419222440]
 position = Vector2(0, -32)
@@ -444,8 +407,6 @@ vframes = 5
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1495065976]
 shape = SubResource("CircleShape2D_onrkg")
-
-[node name="Camera2D" type="Camera2D" parent="." unique_id=399923974]
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1715350014]
 libraries/ = SubResource("AnimationLibrary_5ann7")
@@ -462,9 +423,6 @@ avoidance_enabled = true
 radius = 48.0
 neighbor_distance = 128.0
 max_speed = 128.0
-debug_enabled = true
-debug_use_custom = true
-debug_path_custom_color = Color(1, 0.28235295, 0.24313726, 1)
 
 [node name="HurtBox" type="Area2D" parent="." unique_id=1464262953]
 position = Vector2(-4, -5)
@@ -483,6 +441,7 @@ rotation = -0.21293017
 scale = Vector2(1.1116464, 1.1642635)
 collision_layer = 0
 collision_mask = 32
+monitoring = false
 monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="HitBox" unique_id=1512883953]

@@ -22,6 +22,8 @@ buses/default_bus_layout="uid://rin8gotnke8c"
 [autoload]
 
 PlayerData="*res://global/playerdata.gd"
+AudioSettings="*res://global/audiosettings.gd"
+Juice="*res://global/juice.gd"
 
 [display]
 

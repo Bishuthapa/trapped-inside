@@ -12,23 +12,17 @@ const MAX_HP: int = 200
 
 var lives: int = MAX_LIVES
 var hitpoints: int = MAX_HP
-var lost_life_in_room: bool = false
 
 
 func reset_for_new_game() -> void:
 	lives = MAX_LIVES
 	hitpoints = MAX_HP
-	lost_life_in_room = false
 	lives_changed.emit(lives)
 	hp_changed.emit(hitpoints, MAX_HP)
 
 
 func apply_room_transition() -> void:
-	if not lost_life_in_room:
-		hitpoints = MAX_HP
-	else:
-		hitpoints = MAX_HP
-	lost_life_in_room = false
+	hitpoints = MAX_HP
 	hp_changed.emit(hitpoints, MAX_HP)
 
 
@@ -39,8 +33,14 @@ func take_damage(amount: int) -> void:
 	hp_changed.emit(hitpoints, MAX_HP)
 
 
+func heal(amount: int) -> void:
+	if amount <= 0 or hitpoints <= 0:
+		return
+	hitpoints = mini(hitpoints + amount, MAX_HP)
+	hp_changed.emit(hitpoints, MAX_HP)
+
+
 func lose_life() -> bool:
-	lost_life_in_room = true
 	lives -= 1
 	lives_changed.emit(lives)
 	if lives <= 0:

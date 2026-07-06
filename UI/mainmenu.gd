@@ -41,4 +41,8 @@ func _on_animation_player_ready() -> void:
 	$AnimationPlayer.play("fadein")
 
 func _on_backoption_2_pressed() -> void:
-	_ready()
+	_show_main_panel()
+
+func _show_main_panel() -> void:
+	v_box_container.visible = true
+	setting.visible = false

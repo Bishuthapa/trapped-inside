@@ -1,16 +1,15 @@
 extends Node2D
 
+# When true the final animation frame (the skull) stays on screen instead of
+# the effect freeing itself — used for the player's game-over death.
+@export var persist_last_frame: bool = false
 
-# Called when the node enters the scene tree for the first time.
+
 func _ready() -> void:
 	$AnimationPlayer.play("death")
 
 
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-#func _process(delta: float) -> void:
-	#pass
-
-
-
 func _on_animation_player_animation_finished(_anim_name: StringName) -> void:
+	if persist_last_frame:
+		return
 	queue_free()

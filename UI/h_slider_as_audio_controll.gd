@@ -18,3 +18,6 @@ func _on_value_changed(value: float) -> void:
 	if _audio_bus_id < 0:
 		return
 	AudioServer.set_bus_volume_db(_audio_bus_id, linear_to_db(value))
+	var settings: Node = get_node_or_null("/root/AudioSettings")
+	if settings:
+		settings.save_bus_volume(audio_bus_name, value)
