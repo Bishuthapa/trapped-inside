@@ -5,6 +5,7 @@ signal objective_changed(text: String)
 
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemies/enemy.tscn")
 const GOBLIN_SCENE: PackedScene = preload("res://scenes/enemies/Goblin.tscn")
+const LIZARD_SCENE: PackedScene = preload("res://scenes/enemies/Lizardman.tscn")
 
 # Two regular waves, then one guaranteed-visible mini-boss instead of a
 # crowded final wave — large maps + many simultaneous nav agents let enemies
@@ -13,6 +14,7 @@ const GOBLIN_SCENE: PackedScene = preload("res://scenes/enemies/Goblin.tscn")
 # removes that failure mode entirely and reads as a proper final encounter.
 const WAVES: Array[int] = [2, 3]
 const GOBLIN_WAVES: Array[int] = [0, 1]
+const LIZARD_WAVES: Array[int] = [1, 1]
 const BOSS_EXTRA_HP: int = 500
 const BOSS_SCALE: float = 1.6
 const BOSS_EXTRA_DAMAGE: int = 45
@@ -66,7 +68,8 @@ func _start_next_wave() -> void:
 	var wave_number := _wave_index + 1
 	var enemy_count := WAVES[_wave_index]
 	var goblin_count := GOBLIN_WAVES[_wave_index]
-	_enemies_alive_in_wave = enemy_count + goblin_count
+	var lizard_count := LIZARD_WAVES[_wave_index]
+	_enemies_alive_in_wave = enemy_count + goblin_count + lizard_count
 	objective_changed.emit("Survive wave %d/%d" % [wave_number, WAVES.size() + 1])
 
 	var spawn_index := 0
@@ -75,6 +78,9 @@ func _start_next_wave() -> void:
 		spawn_index += 1
 	for i in goblin_count:
 		_spawn_enemy(GOBLIN_SCENE, spawn_index)
+		spawn_index += 1
+	for i in lizard_count:
+		_spawn_enemy(LIZARD_SCENE, spawn_index)
 		spawn_index += 1
 
 	_wave_index += 1

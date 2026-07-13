@@ -30,6 +30,37 @@ func _ready() -> void:
 	_apply_floor_tint(current_level)
 	_connect_player_to_hud()
 	_connect_level_events()
+	_wire_pause_menu()
+
+
+func _wire_pause_menu() -> void:
+	if _pause_menu == null:
+		return
+	if _pause_menu.has_signal("quit_to_menu") and not _pause_menu.quit_to_menu.is_connected(_on_pause_quit_to_menu):
+		_pause_menu.quit_to_menu.connect(_on_pause_quit_to_menu)
+	if _pause_menu.has_signal("restart_requested") and not _pause_menu.restart_requested.is_connected(_on_pause_restart_requested):
+		_pause_menu.restart_requested.connect(_on_pause_restart_requested)
+
+
+func _on_pause_restart_requested() -> void:
+	# Prefer letting scenehandler own the transition (proper main-menu flow),
+	# but fall back to a plain scene reload when this level is run standalone
+	# (e.g. F6 "play current scene" in the editor) and no scenehandler exists.
+	var scene_handler: Node = get_tree().root.get_node_or_null("scenehandler")
+	if scene_handler and scene_handler.has_method("restart_game"):
+		scene_handler.restart_game()
+	else:
+		get_tree().paused = false
+		get_tree().reload_current_scene()
+
+
+func _on_pause_quit_to_menu() -> void:
+	var scene_handler: Node = get_tree().root.get_node_or_null("scenehandler")
+	if scene_handler and scene_handler.has_method("go_to_main_menu"):
+		scene_handler.go_to_main_menu()
+	else:
+		get_tree().paused = false
+		get_tree().quit()
 
 
 func _start_game_music() -> void:
@@ -135,12 +166,8 @@ func _find_level_node() -> Node2D:
 	return null
 
 
-func _apply_floor_tint(level: Node) -> void:
-	if level == null:
-		return
-	var floor_layer := level.get_node_or_null("floor") as TileMapLayer
-	if floor_layer:
-		floor_layer.modulate = FLOOR_TINT
+func _apply_floor_tint(_level: Node) -> void:
+	pass
 
 
 func _connect_player_to_hud() -> void:

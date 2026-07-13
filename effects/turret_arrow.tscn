@@ -1,0 +1,39 @@
+[gd_scene format=3 uid="uid://c8turretarrow01"]
+
+[ext_resource type="Script" path="res://effects/turret_arrow.gd" id="1_arrow"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_arrow"]
+size = Vector2(28.0, 10.0)
+
+[sub_resource type="Gradient" id="Gradient_arrow"]
+colors = PackedColorArray(0.85, 0.65, 0.2, 1, 0.55, 0.35, 0.1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_arrow"]
+gradient = SubResource("Gradient_arrow")
+width = 24
+height = 8
+fill = 1
+fill_from = Vector2(0, 0.5)
+fill_to = Vector2(1, 0.5)
+
+[node name="TurretArrow" type="Area2D"]
+scale = Vector2(1.6, 1.6)
+collision_layer = 0
+collision_mask = 33
+monitoring = true
+monitorable = false
+script = ExtResource("1_arrow")
+
+[node name="ArrowVisual" type="Sprite2D" parent="."]
+texture = SubResource("GradientTexture2D_arrow")
+centered = false
+offset = Vector2(-12.0, -4.0)
+
+[node name="ArrowHead" type="Polygon2D" parent="ArrowVisual"]
+position = Vector2(24.0, 4.0)
+color = Color(0.75, 0.2, 0.15, 1)
+polygon = PackedVector2Array(0, -6, 10, 0, 0, 6)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(6.0, 0.0)
+shape = SubResource("RectangleShape2D_arrow")

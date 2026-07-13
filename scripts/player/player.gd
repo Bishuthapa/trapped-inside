@@ -19,6 +19,8 @@ enum State {
 @export var dash_speed: int = 900
 @export var dash_duration: float = 0.18
 @export var dash_cooldown: float = 1.2
+@export var knockback_force: float = 320.0
+@export var knockback_duration: float = 0.15
 
 const INVULNERABILITY_TIME: float = 2.0
 const HURT_FLASH_COLOR: Color = Color(1.5, 0.5, 0.5)
@@ -41,6 +43,8 @@ var _dash_direction: Vector2 = Vector2.ZERO
 var _dash_time_left: float = 0.0
 var _attack_cooldown_left: float = 0.0
 var _dash_cooldown_left: float = 0.0
+var _knockback_velocity: Vector2 = Vector2.ZERO
+var _knockback_time: float = 0.0
 var _attack_was_on_cooldown: bool = false
 var _dash_was_on_cooldown: bool = false
 
@@ -91,8 +95,19 @@ func _physics_process(delta: float) -> void:
 	if _is_dashing:
 		_process_dash(delta)
 		return
+	if _knockback_time > 0.0:
+		_process_knockback(delta)
+		return
 	if state != State.ATTACK:
 		movement_loop()
+
+
+func _process_knockback(delta: float) -> void:
+	velocity = _knockback_velocity
+	move_and_slide()
+	_knockback_time -= delta
+	if _knockback_time <= 0.0:
+		_knockback_velocity = Vector2.ZERO
 
 
 func _process_dash(delta: float) -> void:
@@ -213,7 +228,7 @@ func attack() -> void:
 	update_animation()
 
 
-func take_damage(damage_taken: int) -> void:
+func take_damage(damage_taken: int, source_pos: Vector2 = Vector2.INF) -> void:
 	if _invulnerable or state == State.DEAD or _is_respawning or _is_dashing:
 		return
 	_player_data.take_damage(damage_taken)
@@ -223,6 +238,17 @@ func take_damage(damage_taken: int) -> void:
 		_play_sfx(NORMAL_ENEMY_HIT_SFX)
 	_flash_hurt()
 	_shake_camera()
+	_apply_knockback(source_pos)
+
+
+func _apply_knockback(source_pos: Vector2) -> void:
+	if source_pos == Vector2.INF:
+		return
+	var direction := (global_position - source_pos).normalized()
+	if direction == Vector2.ZERO:
+		direction = Vector2.RIGHT
+	_knockback_velocity = direction * knockback_force
+	_knockback_time = knockback_duration
 
 
 func _flash_hurt() -> void:

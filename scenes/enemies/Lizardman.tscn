@@ -1,0 +1,83 @@
+[gd_scene format=3 uid="uid://dvlx1ap6rodxe"]
+
+[ext_resource type="Script" uid="uid://dt5jumg1wvol3" path="res://scripts/enemies/lizardman.gd" id="1_liz"]
+[ext_resource type="SpriteFrames" uid="uid://dsb1yyollyrv3" path="res://assets/sprites/enemies/lizardman/lizardman_frames.tres" id="2_liz"]
+[ext_resource type="Texture2D" uid="uid://btdh68t10ifd3" path="res://UI/Banners/Carved_3Slides.png" id="3_liz"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_liz"]
+radius = 26.0
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_liz"]
+radius = 26.0
+height = 80.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_liz"]
+size = Vector2(28, 56)
+
+[node name="Lizardman" type="CharacterBody2D" unique_id=131392890]
+collision_layer = 2
+collision_mask = 2
+script = ExtResource("1_liz")
+speed = 110
+attack_damage = 25
+hitpoints = 140
+max_hitpoints = 140
+aggro_range = 600.0
+attack_range = 70.0
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=2117147924]
+position = Vector2(0, -48)
+scale = Vector2(3, 3)
+sprite_frames = ExtResource("2_liz")
+animation = &"walk"
+autoplay = "idle"
+frame_progress = 0.23587997
+speed_scale = 0.7
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1301615236]
+position = Vector2(0, -26)
+shape = SubResource("CircleShape2D_liz")
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="." unique_id=798894649]
+path_postprocessing = 1
+avoidance_enabled = true
+radius = 40.0
+neighbor_distance = 128.0
+max_speed = 110.0
+
+[node name="HurtBox" type="Area2D" parent="." unique_id=2064000450]
+collision_layer = 16
+collision_mask = 0
+input_pickable = false
+monitoring = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HurtBox" unique_id=1107542063]
+position = Vector2(0, -40)
+shape = SubResource("CapsuleShape2D_liz")
+
+[node name="HitBox" type="Area2D" parent="." unique_id=809851499]
+collision_layer = 0
+collision_mask = 32
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitBox" unique_id=1052954931]
+position = Vector2(0, -40)
+shape = SubResource("RectangleShape2D_liz")
+
+[node name="HealthBar" type="TextureProgressBar" parent="." unique_id=2060319489]
+offset_left = -32.0
+offset_top = -104.0
+offset_right = 32.0
+offset_bottom = -94.0
+size_flags_horizontal = 4
+size_flags_vertical = 0
+value = 100.0
+nine_patch_stretch = true
+texture_under = ExtResource("3_liz")
+texture_progress = ExtResource("3_liz")
+tint_under = Color(0.95649725, 0.57527167, 1.1551381e-06, 1)
+tint_progress = Color(0.9283432, 0, 0.17848146, 1)
+
+[connection signal="velocity_computed" from="NavigationAgent2D" to="." method="_on_navigation_agent_2d_velocity_computed"]
+[connection signal="area_entered" from="HitBox" to="." method="_on_hit_box_area_entered"]

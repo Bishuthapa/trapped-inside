@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://c8spearproj01"]
+
+[ext_resource type="Script" path="res://effects/spear_projectile.gd" id="1_spear"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_spear"]
+size = Vector2(46.0, 12.0)
+
+[node name="SpearProjectile" type="Area2D"]
+scale = Vector2(1.5, 1.5)
+collision_layer = 0
+collision_mask = 33
+monitoring = true
+monitorable = false
+script = ExtResource("1_spear")
+
+[node name="RearCap" type="Polygon2D" parent="."]
+color = Color(0.14, 0.14, 0.15, 1)
+polygon = PackedVector2Array(-14, -5, -24, 0, -14, 5)
+
+[node name="Shaft" type="Polygon2D" parent="."]
+color = Color(0.07, 0.07, 0.08, 1)
+polygon = PackedVector2Array(-14, -2.5, 14, -2.5, 14, 2.5, -14, 2.5)
+
+[node name="Gem" type="Polygon2D" parent="."]
+color = Color(0.72, 0.06, 0.09, 1)
+polygon = PackedVector2Array(0, -4, 4, 0, 0, 4, -4, 0)
+
+[node name="Guard" type="Polygon2D" parent="."]
+color = Color(0.13, 0.13, 0.14, 1)
+polygon = PackedVector2Array(14, -3, 17, -6, 19, -3, 19, 3, 17, 6, 14, 3)
+
+[node name="Blade" type="Polygon2D" parent="."]
+color = Color(0.78, 0.79, 0.81, 1)
+polygon = PackedVector2Array(19, -3, 25, -9, 36, 0, 25, 9, 19, 3)
+
+[node name="BladeStripe" type="Polygon2D" parent="."]
+color = Color(0.38, 0.09, 0.11, 1)
+polygon = PackedVector2Array(20, -2, 25, -6, 33, 0, 25, 6, 20, 2)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(8.0, 0.0)
+shape = SubResource("RectangleShape2D_spear")

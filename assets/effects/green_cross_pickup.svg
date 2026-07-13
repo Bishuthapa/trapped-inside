@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- outer sketchy rings -->
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#20241f" stroke-width="2"/>
+  <circle cx="32" cy="32" r="26.5" fill="none" stroke="#20241f" stroke-width="1.4"/>
+  <!-- green coin -->
+  <circle cx="32" cy="32" r="23" fill="#5cb04a" stroke="#20241f" stroke-width="1.6"/>
+  <!-- white medical cross with dark outline -->
+  <path d="M26 15 h12 v11 h11 v12 h-11 v11 h-12 v-11 h-11 v-12 h11 z"
+        fill="#ffffff" stroke="#20241f" stroke-width="1.8" stroke-linejoin="round"/>
+</svg>

@@ -34,19 +34,36 @@ var _knockback_time: float = 0.0
 
 
 @onready var spawn_point: Vector2 = global_position
-@onready var animation_tree: AnimationTree = $AnimationTree
-@onready var animation_playback: AnimationNodeStateMachinePlayback = $AnimationTree ["parameters/playback"]
+@onready var animation_tree: AnimationTree = get_node_or_null("AnimationTree")
 @onready var health_bar: TextureProgressBar = $HealthBar
 
 @onready var nav_agent : NavigationAgent2D = $NavigationAgent2D
 
+var animation_playback: AnimationNodeStateMachinePlayback = null
+
 signal died(pos: Vector2)
 
 func _ready() -> void:
-	animation_tree.set_active(true)
+	# AnimationTree only exists on the Sprite2D-based enemies (Warrior/Goblin);
+	# the Lizardman subclass uses an AnimatedSprite2D and has no tree.
+	if animation_tree:
+		animation_tree.set_active(true)
+		animation_playback = animation_tree["parameters/playback"]
 	hitpoints = max_hitpoints
 	health_bar.max_value = max_hitpoints
 	health_bar.value = hitpoints
+
+
+# --- Overridable visual hooks (Lizardman overrides these) ---
+
+func _visual() -> Node2D:
+	return $Sprite2D
+
+
+func _attack_hitbox_on(_attack_dir: Vector2) -> void:
+	# Warrior/Goblin enable HitBox via AnimationPlayer tracks; subclasses
+	# without those tracks (Lizardman) drive the hitbox here instead.
+	pass
 
 
 func _get_player() -> CharacterBody2D:
@@ -105,9 +122,9 @@ func _physics_process(_delta: float) -> void:
 
 	if state in [State.IDLE, State.CHASE, State.RETURN]:
 		if velocity.x < -0.01:
-			$Sprite2D.flip_h = true
+			_visual().flip_h = true
 		elif velocity.x > 0.01:
-			$Sprite2D.flip_h = false
+			_visual().flip_h = false
 
 
 func _determine_next_state() -> State:
@@ -155,10 +172,12 @@ func attack() -> void:
 
 	var player_pos: Vector2 = target_player.global_position
 	var attack_dir: Vector2 = (player_pos - global_position).normalized()
-	$Sprite2D.flip_h = attack_dir.x < 0 and abs(attack_dir.x) >= abs(attack_dir.y)
-	animation_tree.set("parameters/attack/BlendSpace2D/blend_position", attack_dir)
+	_visual().flip_h = attack_dir.x < 0 and abs(attack_dir.x) >= abs(attack_dir.y)
+	if animation_tree:
+		animation_tree.set("parameters/attack/BlendSpace2D/blend_position", attack_dir)
 	_telegraph_attack()
 	_play_attack_sfx()
+	_attack_hitbox_on(attack_dir)
 
 	await get_tree().create_timer(attack_speed).timeout
 	if not is_instance_valid(self):
@@ -212,6 +231,8 @@ func _on_navigation_agent_2d_velocity_computed(safe_velocity: Vector2) -> void:
 
 
 func update_animation() -> void:
+	if animation_playback == null:
+		return
 	match state:
 		State.IDLE:
 			animation_playback.travel("idle")
@@ -245,7 +266,7 @@ func _apply_knockback(source_pos: Vector2) -> void:
 
 
 func _flash_hit() -> void:
-	var sprite := $Sprite2D
+	var sprite := _visual()
 	if sprite == null:
 		return
 	sprite.modulate = Color(1.5, 0.6, 0.6)
@@ -256,7 +277,7 @@ func _flash_hit() -> void:
 
 func _telegraph_attack() -> void:
 	# Brief yellow wind-up tint so the player can read the incoming swing.
-	var sprite := $Sprite2D
+	var sprite := _visual()
 	if sprite == null:
 		return
 	sprite.modulate = Color(1.4, 1.3, 0.5)

@@ -28,6 +28,7 @@ func new_game(_origin: String) -> void:
 
 
 func restart_game() -> void:
+	get_tree().paused = false
 	call_deferred("_begin_game")
 
 
@@ -40,24 +41,10 @@ func _begin_game() -> void:
 	_player_data.reset_for_new_game()
 	current_game = game_scene_packed.instantiate()
 	add_child(current_game)
-	_wire_pause_menu(current_game.find_child("pause", true, false))
-
-
-func _wire_pause_menu(pause_menu: Node) -> void:
-	if pause_menu == null:
-		push_warning("Pause menu not found!")
-		return
-
-	var quit_cb := Callable(self, "go_to_main_menu")
-	if pause_menu.has_signal("quit_to_menu") and not pause_menu.quit_to_menu.is_connected(quit_cb):
-		pause_menu.quit_to_menu.connect(quit_cb)
-
-	var restart_cb := Callable(self, "restart_game")
-	if pause_menu.has_signal("restart_requested") and not pause_menu.restart_requested.is_connected(restart_cb):
-		pause_menu.restart_requested.connect(restart_cb)
 
 
 func go_to_main_menu():
+	get_tree().paused = false
 	clear_scene()
 	load_main_menu("pause")
 
