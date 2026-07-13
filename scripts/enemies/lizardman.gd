@@ -70,6 +70,7 @@ func death() -> void:
 	var death_pos := global_position
 	state = State.DEAD
 	died.emit(death_pos)
+	_register_kill()
 
 	# Freeze combat: no more hits in or out.
 	health_bar.visible = false

@@ -360,7 +360,13 @@ func _on_hit_box_area_entered(area: Area2D) -> void:
 		var is_fatal: bool = is_instance_valid(target) and "hitpoints" in target and target.hitpoints <= 0
 		if is_fatal:
 			_play_sfx(SWORD_SLICE_SFX)
+			# Killing blow: bigger shake to sell the kill (hitstop is fired by
+			# the enemy's own death() via the Juice autoload).
+			_shake_camera(10.0, 0.28)
 		elif "is_large_enemy" in target and target.is_large_enemy:
 			_play_sfx(LARGE_ENEMY_HIT_SFX)
+			_shake_camera(5.0, 0.16)
 		else:
 			_play_sfx(NORMAL_ENEMY_HIT_SFX)
+			# Light impact feedback on every connecting hit.
+			_shake_camera(3.0, 0.12)

@@ -2,6 +2,7 @@ extends Control
 
 @onready var v_box_container: VBoxContainer = $TextureRect/CenterContainer/VBoxContainer
 @onready var setting: Panel = $Setting
+@onready var how_to_play: Panel = $HowToPlay
 
 signal new_game_pressed(origin: String)
 signal settings_pressed(origin: String)
@@ -10,6 +11,7 @@ signal exit_pressed(origin: String)
 func _ready():
 	v_box_container.visible = true
 	setting.visible = false
+	how_to_play.visible = false
 
 func _on_new_game_pressed() -> void:
 	$"TextureRect/CenterContainer/VBoxContainer/new game/click".play()
@@ -46,3 +48,13 @@ func _on_backoption_2_pressed() -> void:
 func _show_main_panel() -> void:
 	v_box_container.visible = true
 	setting.visible = false
+	how_to_play.visible = false
+
+
+func _on_how_to_play_pressed() -> void:
+	v_box_container.visible = false
+	how_to_play.visible = true
+
+
+func _on_how_to_play_back_pressed() -> void:
+	_show_main_panel()

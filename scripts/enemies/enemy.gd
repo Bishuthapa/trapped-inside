@@ -305,6 +305,7 @@ func death() -> void:
 	var death_pos := global_position
 	state = State.DEAD
 	died.emit(death_pos)
+	_register_kill()
 
 	var death_scene: Node2D = death_packed.instantiate()
 	var effects := _get_effects_node()
@@ -331,6 +332,12 @@ func _trigger_kill_hitstop() -> void:
 	var juice: Node = get_node_or_null("/root/Juice")
 	if juice:
 		juice.kill_hitstop()
+
+
+func _register_kill() -> void:
+	var pd: Node = get_node_or_null("/root/PlayerData")
+	if pd and pd.has_method("register_kill"):
+		pd.register_kill()
 
 
 func _on_hit_box_area_entered(area: Area2D) -> void:

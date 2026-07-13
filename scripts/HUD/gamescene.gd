@@ -201,6 +201,7 @@ func _on_game_over() -> void:
 	if _game_over_ui and is_instance_valid(_game_over_ui):
 		return
 
+	_player_data.mark_run_ended()
 	get_tree().paused = true
 	_game_over_ui = GAME_OVER_SCENE.instantiate()
 	$UI.add_child(_game_over_ui)
@@ -221,6 +222,7 @@ func _on_game_over_return_to_menu() -> void:
 func _on_level_completed() -> void:
 	if _game_complete_ui and is_instance_valid(_game_complete_ui):
 		return
+	_player_data.mark_run_ended()
 	get_tree().paused = true
 	_game_complete_ui = GAME_COMPLETE_SCENE.instantiate()
 	$UI.add_child(_game_complete_ui)

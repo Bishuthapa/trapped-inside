@@ -172,6 +172,31 @@ stream = ExtResource("8_m7qvm")
 volume_db = 5.045
 bus = &"sfx"
 
+[node name="howtoplay" type="TextureButton" parent="TextureRect/CenterContainer/VBoxContainer" unique_id=733408090]
+custom_minimum_size = Vector2(500, 150)
+layout_mode = 2
+texture_normal = ExtResource("1_wgsso")
+texture_pressed = ExtResource("2_igs2m")
+texture_hover = ExtResource("3_3pujl")
+stretch_mode = 0
+
+[node name="Label" type="Label" parent="TextureRect/CenterContainer/VBoxContainer/howtoplay" unique_id=733408089]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 78.0
+grow_horizontal = 2
+theme_override_colors/font_shadow_color = Color(0, 0.015686275, 0, 0.6745098)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_constants/shadow_outline_size = 16
+theme_override_fonts/font = ExtResource("5_81nvf")
+theme_override_font_sizes/font_size = 48
+text = "HOW TO PLAY"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="spacer" type="Control" parent="TextureRect/CenterContainer/VBoxContainer" unique_id=733408091]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
@@ -378,6 +403,95 @@ theme_override_font_sizes/font_size = 40
 text = "Fullscreen"
 script = ExtResource("12_pqw7e")
 
+[node name="HowToPlay" type="Panel" parent="." unique_id=915553181]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -480.0
+offset_top = -450.0
+offset_right = 480.0
+offset_bottom = 450.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Title" type="Label" parent="HowToPlay" unique_id=915553182]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -220.0
+offset_top = 28.0
+offset_right = 220.0
+offset_bottom = 114.0
+grow_horizontal = 2
+theme_override_fonts/font = ExtResource("5_81nvf")
+theme_override_font_sizes/font_size = 60
+text = "How to Play"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Controls" type="Label" parent="HowToPlay" unique_id=915553183]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 60.0
+offset_top = 140.0
+offset_right = -60.0
+offset_bottom = 660.0
+grow_horizontal = 2
+theme_override_constants/line_spacing = 16
+theme_override_fonts/font = ExtResource("5_81nvf")
+theme_override_font_sizes/font_size = 38
+text = "WASD  —  Move
+Left Mouse  —  Attack (aim with cursor)
+Space  —  Dash (brief dodge, i-frames)
+Esc  —  Pause
+
+Goal:  Clear every enemy wave, grab the key,
+reach the door.  Grab green crosses to heal.
+Beware the spear turrets on the pillars!"
+horizontal_alignment = 1
+vertical_alignment = 0
+
+[node name="Back" type="TextureButton" parent="HowToPlay" unique_id=915553184]
+custom_minimum_size = Vector2(400, 130)
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -150.0
+offset_right = 200.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+texture_normal = ExtResource("1_wgsso")
+texture_pressed = ExtResource("2_igs2m")
+texture_hover = ExtResource("3_3pujl")
+stretch_mode = 0
+
+[node name="Label" type="Label" parent="HowToPlay/Back" unique_id=915553185]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_shadow_color = Color(0, 0.015686275, 0, 0.6745098)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_fonts/font = ExtResource("5_81nvf")
+theme_override_font_sizes/font_size = 48
+text = "BACK"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [connection signal="mouse_exited" from="." to="." method="_on_mouse_exited"]
 [connection signal="ready" from="." to="." method="_on_ready"]
 [connection signal="mouse_entered" from="TextureRect" to="." method="_on_texture_rect_mouse_entered"]
@@ -390,6 +504,8 @@ script = ExtResource("12_pqw7e")
 [connection signal="pressed" from="TextureRect/CenterContainer/VBoxContainer/settings" to="." method="_on_settings_pressed"]
 [connection signal="mouse_entered" from="TextureRect/CenterContainer/VBoxContainer/exit" to="." method="_on_exit_mouse_entered"]
 [connection signal="pressed" from="TextureRect/CenterContainer/VBoxContainer/exit" to="." method="_on_exit_pressed"]
+[connection signal="pressed" from="TextureRect/CenterContainer/VBoxContainer/howtoplay" to="." method="_on_how_to_play_pressed"]
+[connection signal="pressed" from="HowToPlay/Back" to="." method="_on_how_to_play_back_pressed"]
 [connection signal="ready" from="AnimationPlayer" to="." method="_on_animation_player_ready"]
 [connection signal="mouse_entered" from="Setting/exit2" to="." method="_on_exit_mouse_entered"]
 [connection signal="pressed" from="Setting/exit2" to="." method="_on_backoption_2_pressed"]
