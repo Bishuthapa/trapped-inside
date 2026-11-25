@@ -79,11 +79,13 @@ daily-seed mode is possible later.
 - [ ] Commit current work-in-progress (needs owner OK)
 
 ### M1 — Combat feel
-- [ ] Balance pass with numbers written down (time-to-kill per enemy)
-- [ ] 3-hit combo + finisher
-- [ ] Perfect dodge
-- [ ] Damage numbers, hit particles
-- [ ] Distinct enemy behaviors (ranged goblin, charging lizard)
+- [x] Balance pass with numbers written down (see docs/Balance.md)
+- [x] 3-hit combo + finisher, dash-cancel after the hit window
+- [x] Perfect dodge (slow-mo, attack reset, next hit x1.5)
+- [x] Damage numbers, hit particles
+- [x] Distinct enemy behaviors (ranged goblin, charging lizard)
+- [ ] Playtest and tune numbers in docs/Balance.md
+- [ ] Shield enemy, multi-phase bosses
 
 ### M2 — Run structure (the roguelite itself)
 - [ ] `RunState`, `PlayerStats`, `UpgradeData`

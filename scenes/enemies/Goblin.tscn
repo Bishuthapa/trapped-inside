@@ -395,7 +395,13 @@ size = Vector2(10.75, 42.975002)
 collision_layer = 2
 collision_mask = 2
 script = ExtResource("1_abxm6")
-aggro_range = 450.0
+speed = 150
+attack_damage = 20
+attack_speed = 1.6
+hitpoints = 150
+max_hitpoints = 150
+aggro_range = 550.0
+attack_range = 360.0
 death_packed = ExtResource("2_s4grb")
 attack_sfx = ExtResource("4_fireatk")
 

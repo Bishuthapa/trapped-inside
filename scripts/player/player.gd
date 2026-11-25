@@ -13,9 +13,8 @@ enum State {
 
 @export_category("Stats")
 @export var speed: int = 400
-@export var attack_speed: float = 0.6
-@export var attack_damage: int = 180
-@export var attack_cooldown: float = 0.85
+@export var attack_damage: int = 60          # light hit; finisher deals FINISHER_MULT x this
+@export var attack_cooldown: float = 0.35   # recovery after the 3rd (finisher) hit
 @export var dash_speed: int = 900
 @export var dash_duration: float = 0.18
 @export var dash_cooldown: float = 1.2
@@ -23,6 +22,24 @@ enum State {
 @export var knockback_duration: float = 0.15
 
 const INVULNERABILITY_TIME: float = 2.0
+
+# 3-hit combo. Each swing replays the 0.6s attack animation at its own speed;
+# the hitbox is live at 0.2-0.3s of animation time (set in player.tscn).
+const ATTACK_ANIM_LENGTH: float = 0.6
+const COMBO_TIME_SCALES: Array[float] = [1.8, 1.8, 1.25]
+const COMBO_LUNGE: Array[float] = [10.0, 10.0, 26.0]
+const COMBO_WINDOW: float = 0.35       # time after a swing ends to press attack and continue
+const BUFFER_OPEN_RATIO: float = 0.25  # presses after this fraction of a swing are buffered
+const FINISHER_MULT: float = 2.0
+const FINISHER_KNOCKBACK_MULT: float = 2.2
+
+# Perfect dodge: getting hit during the first part of a dash.
+const PERFECT_DODGE_WINDOW: float = 0.12
+const PERFECT_DODGE_SLOWMO: float = 0.35
+const PERFECT_DODGE_SLOWMO_TIME: float = 0.35  # real seconds
+const EMPOWER_MULT: float = 1.5
+const EMPOWER_TIME: float = 2.0
+const EMPOWER_COLOR: Color = Color(0.7, 1.3, 1.5)
 const HURT_FLASH_COLOR: Color = Color(1.5, 0.5, 0.5)
 const DEATH_SCENE: PackedScene = preload("res://assets/effects/death.tscn")
 
@@ -44,6 +61,14 @@ var _knockback_time: float = 0.0
 var _attack_was_on_cooldown: bool = false
 var _dash_was_on_cooldown: bool = false
 var _using_gamepad: bool = false
+var _combo_step: int = 0
+var _combo_window_left: float = 0.0
+var _swing_time_left: float = 0.0
+var _swing_length: float = 0.0
+var _attack_buffered: bool = false
+var _swing_hit_targets: Array[Node] = []
+var _empowered_time_left: float = 0.0
+var _perfect_dodge_used: bool = false
 
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var animation_playback: AnimationNodeStateMachinePlayback = $AnimationTree["parameters/playback"]
@@ -105,7 +130,9 @@ func _physics_process(delta: float) -> void:
 	if _knockback_time > 0.0:
 		_process_knockback(delta)
 		return
-	if state != State.ATTACK:
+	if state == State.ATTACK:
+		_process_swing(delta)
+	else:
 		movement_loop()
 
 
@@ -126,6 +153,15 @@ func _process_dash(delta: float) -> void:
 
 
 func _update_cooldowns(delta: float) -> void:
+	if _combo_window_left > 0.0:
+		_combo_window_left -= delta
+		if _combo_window_left <= 0.0:
+			_combo_step = 0
+	if _empowered_time_left > 0.0:
+		_empowered_time_left -= delta
+		if _empowered_time_left <= 0.0:
+			_set_empowered_visual(false)
+
 	if _attack_cooldown_left > 0.0:
 		_attack_was_on_cooldown = true
 		_attack_cooldown_left = maxf(_attack_cooldown_left - delta, 0.0)
@@ -176,8 +212,13 @@ func update_animation() -> void:
 
 
 func try_dash() -> void:
-	if _is_dashing or _dash_cooldown_left > 0.0 or state == State.ATTACK:
+	if _is_dashing or _dash_cooldown_left > 0.0:
 		return
+	if state == State.ATTACK:
+		# Dash-cancel is allowed once the swing's hit window has passed.
+		if _swing_time_left > _swing_length * 0.5:
+			return
+		_cancel_swing()
 
 	var dash_direction := move_direction
 	if dash_direction == Vector2.ZERO:
@@ -189,6 +230,7 @@ func try_dash() -> void:
 func _start_dash(direction: Vector2) -> void:
 	_is_dashing = true
 	_invulnerable = true
+	_perfect_dodge_used = false
 	_dash_direction = direction
 	_dash_time_left = dash_duration
 
@@ -208,30 +250,85 @@ func _end_dash() -> void:
 
 
 func attack() -> void:
-	if state == State.ATTACK or _is_respawning or _attack_cooldown_left > 0.0:
+	if state == State.DEAD or _is_respawning or _is_dashing:
 		return
+	if state == State.ATTACK:
+		# Mid-swing press: queue the next combo hit.
+		if _combo_step < COMBO_TIME_SCALES.size() - 1 and _swing_time_left < _swing_length * (1.0 - BUFFER_OPEN_RATIO):
+			_attack_buffered = true
+		return
+	if _attack_cooldown_left > 0.0:
+		return
+	if _combo_window_left > 0.0 and _combo_step < COMBO_TIME_SCALES.size() - 1:
+		_combo_step += 1
+	else:
+		_combo_step = 0
+	_combo_window_left = 0.0
+	_start_swing()
 
+
+func _start_swing() -> void:
+	_attack_buffered = false
+	_swing_hit_targets.clear()
 	state = State.ATTACK
-	_attack_cooldown_left = attack_cooldown
-	attack_cooldown_changed.emit(0.0)
+	var time_scale: float = COMBO_TIME_SCALES[_combo_step]
+	_swing_length = ATTACK_ANIM_LENGTH / time_scale
+	_swing_time_left = _swing_length
+
+	var attack_dir: Vector2 = _get_aim_direction()
+	$Sprite2D.flip_h = attack_dir.x < 0 and abs(attack_dir.x) >= abs(attack_dir.y)
+	animation_tree.set("parameters/attack/BlendSpace2D/blend_position", attack_dir)
+	animation_tree.set("parameters/attack/TimeScale/scale", time_scale)
+	animation_playback.start("attack", true)
+
+	# Small step into the swing; bigger on the finisher.
+	move_and_collide(attack_dir * COMBO_LUNGE[_combo_step])
 	Sfx.play("sword_swing")
 
-	var attck_dir: Vector2 = _get_aim_direction()
-	$Sprite2D.flip_h = attck_dir.x < 0 and abs(attck_dir.x) >= abs(attck_dir.y)
-	animation_tree.set("parameters/attack/BlendSpace2D/blend_position", attck_dir)
 
-	update_animation()
+func _process_swing(delta: float) -> void:
+	velocity = Vector2.ZERO
+	_swing_time_left -= delta
+	if _swing_time_left > 0.0:
+		return
+	_finish_swing()
 
-	await get_tree().create_timer(attack_speed).timeout
-	if not is_instance_valid(self) or state == State.DEAD:
+
+func _finish_swing() -> void:
+	var last_step := COMBO_TIME_SCALES.size() - 1
+	if _attack_buffered and _combo_step < last_step:
+		_combo_step += 1
+		_start_swing()
 		return
 
-	if move_direction != Vector2.ZERO:
-		state = State.RUN
+	if _combo_step >= last_step:
+		_combo_step = 0
+		_attack_cooldown_left = attack_cooldown
+		_attack_was_on_cooldown = true
+		attack_cooldown_changed.emit(0.0)
 	else:
-		state = State.IDLE
+		_combo_window_left = COMBO_WINDOW
 
+	_return_to_locomotion()
+
+
+func _cancel_swing() -> void:
+	_attack_buffered = false
+	_swing_time_left = 0.0
+	_combo_step = 0
+	_combo_window_left = 0.0
+	$HitBox.set_deferred("monitoring", false)
+	_return_to_locomotion()
+
+
+func _return_to_locomotion() -> void:
+	animation_tree.set("parameters/attack/TimeScale/scale", 1.0)
+	state = State.RUN if move_direction != Vector2.ZERO else State.IDLE
 	update_animation()
+
+
+func _is_finisher() -> bool:
+	return _combo_step == COMBO_TIME_SCALES.size() - 1
 
 
 func _get_aim_direction() -> Vector2:
@@ -246,9 +343,13 @@ func _get_aim_direction() -> Vector2:
 
 
 func take_damage(damage_taken: int, source_pos: Vector2 = Vector2.INF) -> void:
-	if _invulnerable or state == State.DEAD or _is_respawning or _is_dashing:
+	if _is_dashing and not _is_respawning:
+		_try_perfect_dodge()
+		return
+	if _invulnerable or state == State.DEAD or _is_respawning:
 		return
 	_player_data.take_damage(damage_taken)
+	Juice.damage_number(global_position, damage_taken, Juice.COLOR_PLAYER_HURT)
 	if _player_data.hitpoints <= 0:
 		Sfx.play("sword_slice")
 	else:
@@ -256,6 +357,24 @@ func take_damage(damage_taken: int, source_pos: Vector2 = Vector2.INF) -> void:
 	_flash_hurt()
 	_shake_camera()
 	_apply_knockback(source_pos)
+
+
+func _try_perfect_dodge() -> void:
+	# Only the first PERFECT_DODGE_WINDOW seconds of a dash count, once per dash.
+	if _perfect_dodge_used or (dash_duration - _dash_time_left) > PERFECT_DODGE_WINDOW:
+		return
+	_perfect_dodge_used = true
+	_attack_cooldown_left = 0.0
+	attack_cooldown_changed.emit(1.0)
+	_empowered_time_left = EMPOWER_TIME
+	_set_empowered_visual(true)
+	Juice.text_popup(global_position, "Perfect!", Juice.COLOR_CRIT)
+	Juice.slow_motion(PERFECT_DODGE_SLOWMO, PERFECT_DODGE_SLOWMO_TIME)
+	Sfx.play("sword_swing")
+
+
+func _set_empowered_visual(on: bool) -> void:
+	$Sprite2D.self_modulate = EMPOWER_COLOR if on else Color.WHITE
 
 
 func _apply_knockback(source_pos: Vector2) -> void:
@@ -362,19 +481,46 @@ func _spawn_death_skull() -> void:
 
 
 func _on_hit_box_area_entered(area: Area2D) -> void:
-	if area.owner and area.owner.has_method("take_damage"):
-		var target: Node = area.owner
-		target.take_damage(attack_damage, global_position)
-		var is_fatal: bool = is_instance_valid(target) and "hitpoints" in target and target.hitpoints <= 0
-		if is_fatal:
-			Sfx.play("sword_slice")
-			# Killing blow: bigger shake to sell the kill (hitstop is fired by
-			# the enemy's own death() via the Juice autoload).
-			_shake_camera(10.0, 0.28)
-		elif "is_large_enemy" in target and target.is_large_enemy:
-			Sfx.play("hit_large")
-			_shake_camera(5.0, 0.16)
-		else:
-			Sfx.play("hit")
-			# Light impact feedback on every connecting hit.
-			_shake_camera(3.0, 0.12)
+	if area.owner == null or not area.owner.has_method("take_damage"):
+		return
+	var target: Node = area.owner
+	if target in _swing_hit_targets:
+		return  # one hit per target per swing
+	_swing_hit_targets.append(target)
+
+	var finisher := _is_finisher()
+	var empowered := _empowered_time_left > 0.0
+	var damage := float(attack_damage)
+	if finisher:
+		damage *= FINISHER_MULT
+	if empowered:
+		damage *= EMPOWER_MULT
+	var dmg := int(round(damage))
+
+	var target_pos: Vector2 = (target as Node2D).global_position if target is Node2D else global_position
+	target.take_damage(dmg, global_position)
+	if finisher and is_instance_valid(target) and target.has_method("boost_knockback"):
+		target.boost_knockback(FINISHER_KNOCKBACK_MULT)
+
+	if empowered:
+		# Empowered bonus is spent on the first swing that connects.
+		_empowered_time_left = 0.0
+		_set_empowered_visual(false)
+
+	var hit_dir := (target_pos - global_position).normalized()
+	var color := Juice.COLOR_CRIT if empowered else (Juice.COLOR_HEAVY if finisher else Juice.COLOR_NORMAL)
+	Juice.damage_number(target_pos, dmg, color, finisher or empowered)
+	Juice.hit_burst(target_pos, hit_dir, color, 16 if finisher else 9)
+
+	var is_fatal: bool = is_instance_valid(target) and "hitpoints" in target and target.hitpoints <= 0
+	if is_fatal:
+		Sfx.play("sword_slice")
+		# Killing blow: bigger shake to sell the kill (hitstop is fired by
+		# the enemy's own death() via the Juice autoload).
+		_shake_camera(10.0, 0.28)
+	elif finisher or ("is_large_enemy" in target and target.is_large_enemy):
+		Sfx.play("hit_large")
+		_shake_camera(6.0, 0.18)
+	else:
+		Sfx.play("hit")
+		_shake_camera(3.0, 0.12)

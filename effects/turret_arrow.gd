@@ -38,7 +38,7 @@ func _on_area_entered(area: Area2D) -> void:
 		return
 
 	_hit = true
-	owner_node.take_damage(_damage)
+	owner_node.take_damage(_damage, global_position)
 	queue_free()
 
 
