@@ -9,8 +9,6 @@ extends Node2D
 @export var max_hitpoints: int = 80
 
 const SPEAR_SCENE: PackedScene = preload("res://effects/spear_projectile.tscn")
-const FIRE_SFX: AudioStream = preload("res://assets/audio/sfx/goblin_fire_attack.wav")
-const HIT_SFX: AudioStream = preload("res://assets/audio/sfx/hit.wav")
 
 var hitpoints: int = 0
 var _cooldown_left: float = 0.0
@@ -91,7 +89,7 @@ func _shoot() -> void:
 	_cooldown_left = shoot_cooldown
 
 	_play_recoil()
-	_play_sfx(FIRE_SFX)
+	Sfx.play("turret_fire", global_position)
 
 
 func _play_recoil() -> void:
@@ -105,7 +103,7 @@ func take_damage(damage_taken: int, _source_pos: Vector2 = Vector2.INF) -> void:
 		return
 	hitpoints = clamp(hitpoints - damage_taken, 0, max_hitpoints)
 	_flash_hit()
-	_play_sfx(HIT_SFX)
+	Sfx.play("turret_hit", global_position)
 	if hitpoints <= 0:
 		_destroy()
 
@@ -127,18 +125,6 @@ func _destroy() -> void:
 	tween.tween_property(self, "scale", Vector2.ZERO, 0.25)
 	tween.parallel().tween_property(self, "modulate:a", 0.0, 0.25)
 	tween.finished.connect(queue_free)
-
-
-func _play_sfx(stream: AudioStream) -> void:
-	if stream == null:
-		return
-	var sfx_player := AudioStreamPlayer2D.new()
-	sfx_player.stream = stream
-	sfx_player.bus = "sfx"
-	get_tree().current_scene.add_child(sfx_player)
-	sfx_player.global_position = global_position
-	sfx_player.finished.connect(sfx_player.queue_free)
-	sfx_player.play()
 
 
 func _get_effects_node() -> Node2D:

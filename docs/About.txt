@@ -1,0 +1,115 @@
+1. Boot
+project.godot sets runmain_scene = scenehandler.tscn. Three autoloads (singletons, alive the whole process) spin up first PlayerData, AudioSettings, Juice.
+
+scenehandler.gd (_ready()) calls load_main_menu(start) → instantiates mainmenu.tscn, adds it as a child, connects its 3 signals (new_game_pressed, settings_pressed, exit_pressed) back to itself.
+
+2. Main menu
+mainmenu.gd is pure UI signal-emitting — it never touches gameplay directly. Button presses call _on_new_game_pressed() etc., which emit() a signal. The How to Play button just toggles panel visibility locally (v_box_container.visible = false; how_to_play.visible = true) — no signal needed since scenehandler doesn't care about it.
+
+new_game_pressed fires → scenehandler.new_game() → call_deferred(_begin_game)
+
+_begin_game()
+  clear_scene()                         # frees main menu
+  PlayerData.reset_for_new_game()       # HPliveskillstimer all reset
+  current_game = gamescene.tscn.instantiate()
+  add_child(current_game)
+3. Gamescene boots (the run controller)
+gamescene.gd._ready()
+
+Starts looping background music
+Connects PlayerData.game_over signal → _on_game_over()
+_find_level_node() — scans its own children for the first Node2D that isn't the HUD; that's the currently-embedded level (level_1_map.tscn, since gamescene has it pre-instanced as a child in the .tscn)
+_connect_player_to_hud() — finds the player via get_tree().get_first_node_in_group(player), wires player.update_hp_bar → HUD.update_hp_bar, same for attackdash cooldown signals
+_connect_level_events() — the level emits objective_changed and completed; gamescene wires those to HUD.update_objective and its own _on_level_completed()
+Wires the pause menu's quit_to_menu  restart_requested signals
+Every enemy that dies independently reports its kill straight to the PlayerData autoload (_register_kill() in enemy.gdlizardman.gd) — that path doesn't go through gamescene at all, which is why the HUD kill counter updates live regardless of which level you're in.
+
+4. Player loop (every frame)
+player.gd._physics_process
+
+_update_cooldowns(delta)          # ticks attackdash cooldown, emits ...cooldown_changed
+if DEAD or respawning return
+if dashing _process_dash(); return
+if knockback active _process_knockback(); return   # added for spear-turret hits
+if not ATTACK state movement_loop()                # WASD → velocity → move_and_slide()
+Attack left-click → attack() → sets state = ATTACK, plays swing anim aimed at mouse. The HitBox Area2D (child of player) only monitoring = true during specific animation frames (driven by AnimationPlayer tracks). When it overlaps an enemy's HurtBox, Godot fires area_entered → _on_hit_box_area_entered(area)
+
+target = area.owner                      # the enemy that owns the HurtBox
+target.take_damage(attack_damage, global_position)
+_shake_camera(...)                       # scaled by whether it was a kill
+Taking damage an enemy's HitBox overlapping the player's HurtBox calls player.take_damage(damage, source_pos) → PlayerData.take_damage() (HP down) → flash sprite red → _apply_knockback(source_pos) (sets _knockback_velocity, _knockback_time, picked up next physics frame) → camera shake.
+
+If HP hits 0 PlayerData._on_hp_changed chain → player._handle_hp_depleted() → PlayerData.lose_life(). If lives remain → respawn at spawn point with i-frames. If lives = 0 → PlayerData.game_over.emit() → gamescene catches it → _on_game_over().
+
+5. Enemy AI (shared base, enemy.gd)
+State machine IDLE → CHASE → ATTACK → RETURN → IDLE, ticked every physics frame
+
+_determine_next_state()
+  if attacking stay ATTACK
+  if distance_to_player() = attack_range ATTACK
+  elif distance_to_player() = aggro_range CHASE
+  elif far from spawn RETURN
+  else IDLE
+CHASERETURN drive a NavigationAgent2D — move() asks it for the next path point, converts to velocity, move_and_slide().
+
+ATTACK → attack() → telegraph flash (yellow tint, readable wind-up) → plays swing → enables its own HitBox for a short window → disables it. WarriorGoblin do this via AnimationPlayer tracks; Lizardman (no AnimationTree) does it in code via the overridden _attack_hitbox_on() hook.
+
+take_damage() → HP down, red flash, _apply_knockback(source_pos), and if HP ≤ 0 → death()
+
+died.emit(pos)              # level script listens for this
+_register_kill()            # → PlayerData.enemies_killed++
+spawn death VFX + maybe drop heartgreen-cross pickup
+Juice.kill_hitstop()        # brief Engine.time_scale dip
+queue_free()
+Lizardman overrides death() entirely (plays its death AnimatedSprite2D animation first, then does the same cleanup) — everything else (take_damage, chaseattack state logic, knockback) is inherited unchanged. Goblin is a pure extends enemy.gd with zero code — just different exported stats in its own .tscn.
+
+6. Level scripts — the objective layer
+Each level (level_1_map.gd, level_2_map.gd) is nearly identical
+
+_ready() count starting enemies, connect each `died` signal → _on_enemy_died()
+_on_enemy_died() decrement counter, emit objective_changed
+  when counter hits 0 → _spawn_key() at last enemy's death position
+key.gd on player overlap → key_collected.emit() → level sets has_key = true
+Door (Area2D) body_entered → _on_door_body_entered()
+  if player has_key → game_scene.load_level(next level path)
+Level 2 extra step _spawn_pillar_turrets() runs at _ready() — it reads the pillers TileMapLayer's actual placed cells, flood-fills adjacent tiles into groups (so a multi-tile pillar counts as one), computes each group's center, and spawns a pillar_turret.tscn there. Turrets aren't hand-placed — they're generated from the tilemap data.
+
+Level 3 (level_3_map.gd) is different — no door-gated key hunt, it's wave survival
+
+_ready() clear placeholder enemy nodes (just captures their positions as spawn points)
+_start_next_wave() spawns WAVES[i] Warriors + GOBLIN_WAVES[i] Goblins + LIZARD_WAVES[i] Lizardmen
+each spawned enemy aggro_range forced to ~infinite (always hunts player), died signal → _on_enemy_died()
+when wave count hits 0 → _on_wave_cleared() → next wave after a delay, or the final boss wave
+boss wave one Warrior with configure_as_boss() (extra HPdamagescale)
+all done → _trigger_completion() → completed.emit()
+Two spear_turret instances are hand-placed on pillars in this level's .tscn (not auto-generated like level 2's).
+
+7. Hazard turrets (spear_turret.gd  pillar_turret.gd)
+Independent of the level script — pure distance check every physics frame (no line-of-sight raycast, deliberately matches enemy aggro behavior)
+
+if distance_to_player() = aggro_range
+  rotate toward player every frame (smooth lerp)
+  if cooldown elapsed telegraph flash → after delay → spawn projectile scene, set cooldown
+The projectile (spear_projectile.gdturret_arrow.gd) is a straight-line Area2D moves forward, area_entered on the player's HurtBox → take_damage() (with position, so knockback applies) → queue_free(); hits a wall → despawns.
+
+spear_turret additionally has its own HurtBox (same collision layer as enemies) — so the player's existing sword HitBox damages it via the same _on_hit_box_area_entered path used against enemies. No special-case code needed; take_damage() on the turret just flashesdestroys instead of doing enemy AI.
+
+8. Level transition
+Door._on_door_body_entered → gamescene.load_level(path)
+
+PlayerData.apply_room_transition()   # heals to full HP between levels
+_transition_to_level()
+  show LoadingScene, ResourceLoader.load_threaded_request(path)  # async load, no hitch
+  wait 3s (minimum transition time)
+  _swap_level() free old level, instantiate new one, add_child, re-run
+                 _connect_player_to_hud() + _connect_level_events()
+9. Win  lose
+Lose PlayerData.game_over signal → gamescene._on_game_over() → pauses tree, shows game_over.tscn, which in _ready() pulls PlayerData.enemies_killed + format_run_time() into its Stats label.
+Win level_3's completed signal → gamescene._on_level_completed() → same pattern with game_complete.tscn.
+Both call PlayerData.mark_run_ended() first (freezes the timer so it doesn't tick while you're reading the screen).
+Both screens' buttons emit return_to_menu_pressed  restart_pressed → gamescene relays to scenehandler.go_to_main_menu()  scenehandler.restart_game() — which clear_scene()s everything and starts over from step 23.
+10. Pause (orthogonal to all of this)
+Esc → gamescene._unhandled_input → pause_menu.toggle_pause() → get_tree().paused = true (pause menu itself is PROCESS_MODE_ALWAYS so it still receives input while paused). ResumeRestartQuit buttons emit signals gamescene already wired in step 3.
+
+The one sentence to say to an examiner Scenehandler owns which top-level screen is active (menu vs. game); gamescene owns one full run and swaps levels in-place; every level owns its own win-condition (kill quota + key, or wave survival) and reports up via two signals — objective_changed for the HUD text and completed for ending the run; combat and hazards are fully decoupled from level logic, they just react to Area2D overlaps and report through PlayerData.
+

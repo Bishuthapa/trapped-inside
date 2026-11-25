@@ -1,3 +1,7 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Export outputs (build/web stays tracked for the web release)
+/build/*
+!/build/web/

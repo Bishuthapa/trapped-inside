@@ -16,6 +16,9 @@ var _enemies_remaining: int = 0
 @onready var pillers_layer: TileMapLayer = $pillers
 
 
+const LEVEL_INDEX: int = 2
+
+
 func _ready() -> void:
 	_spawn_pillar_turrets()
 	_enemies_remaining = enemies_node.get_child_count()
@@ -24,7 +27,11 @@ func _ready() -> void:
 	if boss and boss.has_method("configure_as_boss"):
 		boss.configure_as_boss()
 
+	var hp_mult := 1.0 + (LEVEL_INDEX - 1) * 0.15
+	var dmg_mult := 1.0 + (LEVEL_INDEX - 1) * 0.10
 	for enemy in enemies_node.get_children():
+		if enemy.has_method("scale_stats"):
+			enemy.scale_stats(hp_mult, dmg_mult)
 		if enemy.has_signal("died"):
 			enemy.died.connect(_on_enemy_died)
 

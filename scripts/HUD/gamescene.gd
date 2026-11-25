@@ -28,9 +28,18 @@ func _ready() -> void:
 	_player_data.game_over.connect(_on_game_over)
 	current_level = _find_level_node()
 	_apply_floor_tint(current_level)
+	_record_level_reached()
 	_connect_player_to_hud()
 	_connect_level_events()
 	_wire_pause_menu()
+
+
+func _record_level_reached() -> void:
+	if current_level == null or current_level.get_script() == null:
+		return
+	var level_index: Variant = current_level.get_script().get_script_constant_map().get("LEVEL_INDEX")
+	if level_index is int:
+		SaveData.record_level_reached(level_index)
 
 
 func _wire_pause_menu() -> void:
@@ -133,6 +142,7 @@ func _swap_level(level_scene_path: String) -> void:
 	_apply_floor_tint(current_level)
 
 	await get_tree().process_frame
+	_record_level_reached()
 	_connect_player_to_hud()
 	_connect_level_events()
 
@@ -202,6 +212,7 @@ func _on_game_over() -> void:
 		return
 
 	_player_data.mark_run_ended()
+	SaveData.record_run_ended(false, _player_data.enemies_killed, _player_data.get_run_time_seconds())
 	get_tree().paused = true
 	_game_over_ui = GAME_OVER_SCENE.instantiate()
 	$UI.add_child(_game_over_ui)
@@ -223,6 +234,7 @@ func _on_level_completed() -> void:
 	if _game_complete_ui and is_instance_valid(_game_complete_ui):
 		return
 	_player_data.mark_run_ended()
+	SaveData.record_run_ended(true, _player_data.enemies_killed, _player_data.get_run_time_seconds())
 	get_tree().paused = true
 	_game_complete_ui = GAME_COMPLETE_SCENE.instantiate()
 	$UI.add_child(_game_complete_ui)

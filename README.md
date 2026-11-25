@@ -52,16 +52,15 @@ trapped-inside/
 
 ## Controls
 
-| Action | Key |
-|---------|-----|
-| Move Up | `W` |
-| Move Down | `S` |
-| Move Left | `A` |
-| Move Right | `D` |
+| Action | Keyboard / Mouse | Gamepad |
+|---------|-----|-----|
+| Move | `W` `A` `S` `D` | Left stick / D-pad |
+| Attack | Left Mouse Button | `X` / `RT` |
+| Aim | Mouse cursor | Right stick (falls back to move direction) |
+| Dash | `Space` | `A` / `RB` |
+| Pause | `Esc` | `Start` |
 
-### Combat
-
-Aim using the mouse cursor and press the **Left Mouse Button** to attack in the desired direction.
+Menus can be navigated with the D-pad or arrow keys.
 
 ---
 

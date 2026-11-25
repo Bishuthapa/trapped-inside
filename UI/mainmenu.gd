@@ -12,6 +12,24 @@ func _ready():
 	v_box_container.visible = true
 	setting.visible = false
 	how_to_play.visible = false
+	_add_accessibility_toggles()
+	UIFocus.setup(self)
+	UIFocus.focus_first.call_deferred(v_box_container)
+
+
+func _add_accessibility_toggles() -> void:
+	# Built in code so the .tscn stays untouched; styled like the Fullscreen toggle.
+	var options_box: VBoxContainer = $Setting/VBoxContainer
+	var template: CheckButton = options_box.get_node_or_null("CheckButton as screencontrol")
+	for entry in [["screen_shake", "Screen shake"], ["hitstop", "Hit slow-motion"]]:
+		var toggle := CheckButton.new()
+		toggle.text = entry[1]
+		toggle.button_pressed = bool(SaveData.get_setting(entry[0]))
+		if template:
+			toggle.add_theme_font_override("font", template.get_theme_font("font"))
+			toggle.add_theme_font_size_override("font_size", template.get_theme_font_size("font_size"))
+		toggle.toggled.connect(func(on: bool) -> void: SaveData.set_setting(entry[0], on))
+		options_box.add_child(toggle)
 
 func _on_new_game_pressed() -> void:
 	$"TextureRect/CenterContainer/VBoxContainer/new game/click".play()
@@ -22,6 +40,7 @@ func _on_settings_pressed() -> void:
 	settings_pressed.emit("main_menu")
 	v_box_container.visible = false
 	setting.visible = true
+	UIFocus.focus_first(setting)
 
 func _on_exit_pressed() -> void:
 	$TextureRect/CenterContainer/VBoxContainer/exit/click.play()
@@ -49,11 +68,13 @@ func _show_main_panel() -> void:
 	v_box_container.visible = true
 	setting.visible = false
 	how_to_play.visible = false
+	UIFocus.focus_first(v_box_container)
 
 
 func _on_how_to_play_pressed() -> void:
 	v_box_container.visible = false
 	how_to_play.visible = true
+	UIFocus.focus_first(how_to_play)
 
 
 func _on_how_to_play_back_pressed() -> void:

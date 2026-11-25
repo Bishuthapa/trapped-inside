@@ -24,10 +24,6 @@ enum State {
 
 const INVULNERABILITY_TIME: float = 2.0
 const HURT_FLASH_COLOR: Color = Color(1.5, 0.5, 0.5)
-const SWORD_SWING_SFX: AudioStream = preload("res://assets/audio/sfx/sword_swing.mp3")
-const NORMAL_ENEMY_HIT_SFX: AudioStream = preload("res://assets/audio/sfx/normal_enemy_hit.mp3")
-const LARGE_ENEMY_HIT_SFX: AudioStream = preload("res://assets/audio/sfx/large_enemy_hit.mp3")
-const SWORD_SLICE_SFX: AudioStream = preload("res://assets/audio/sfx/sword_slice.mp3")
 const DEATH_SCENE: PackedScene = preload("res://assets/effects/death.tscn")
 
 var state: State = State.IDLE
@@ -47,6 +43,7 @@ var _knockback_velocity: Vector2 = Vector2.ZERO
 var _knockback_time: float = 0.0
 var _attack_was_on_cooldown: bool = false
 var _dash_was_on_cooldown: bool = false
+var _using_gamepad: bool = false
 
 @onready var animation_tree: AnimationTree = $AnimationTree
 @onready var animation_playback: AnimationNodeStateMachinePlayback = $AnimationTree["parameters/playback"]
@@ -77,6 +74,16 @@ func _emit_hp_bar() -> void:
 	update_hp_bar.emit(hitpoints * 100 / hitpoint_max)
 
 
+func _input(event: InputEvent) -> void:
+	# Track the last device used so aiming follows the mouse or the right stick.
+	if event is InputEventJoypadButton:
+		_using_gamepad = true
+	elif event is InputEventJoypadMotion and absf(event.axis_value) > 0.3:
+		_using_gamepad = true
+	elif event is InputEventMouseMotion or event is InputEventMouseButton or event is InputEventKey:
+		_using_gamepad = false
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if state == State.DEAD or _is_respawning or _is_dashing:
 		return
@@ -84,7 +91,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		try_dash()
 		get_viewport().set_input_as_handled()
 		return
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+	if event.is_action_pressed("attack"):
 		attack()
 
 
@@ -137,10 +144,10 @@ func _update_cooldowns(delta: float) -> void:
 
 
 func movement_loop() -> void:
-	move_direction.x = int(Input.is_action_pressed("right")) - int(Input.is_action_pressed("left"))
-	move_direction.y = int(Input.is_action_pressed("down")) - int(Input.is_action_pressed("up"))
+	# get_vector gives analog stick values and already normalizes keyboard diagonals.
+	move_direction = Input.get_vector("left", "right", "up", "down")
 
-	var motion: Vector2 = move_direction.normalized() * speed
+	var motion: Vector2 = move_direction * speed
 	velocity = motion
 	move_and_slide()
 
@@ -207,10 +214,9 @@ func attack() -> void:
 	state = State.ATTACK
 	_attack_cooldown_left = attack_cooldown
 	attack_cooldown_changed.emit(0.0)
-	_play_sfx(SWORD_SWING_SFX)
+	Sfx.play("sword_swing")
 
-	var mouse_pos: Vector2 = get_global_mouse_position()
-	var attck_dir: Vector2 = (mouse_pos - global_position).normalized()
+	var attck_dir: Vector2 = _get_aim_direction()
 	$Sprite2D.flip_h = attck_dir.x < 0 and abs(attck_dir.x) >= abs(attck_dir.y)
 	animation_tree.set("parameters/attack/BlendSpace2D/blend_position", attck_dir)
 
@@ -228,14 +234,25 @@ func attack() -> void:
 	update_animation()
 
 
+func _get_aim_direction() -> Vector2:
+	if not _using_gamepad:
+		return (get_global_mouse_position() - global_position).normalized()
+	var stick := Input.get_vector("aim_left", "aim_right", "aim_up", "aim_down")
+	if stick != Vector2.ZERO:
+		return stick.normalized()
+	if move_direction != Vector2.ZERO:
+		return move_direction.normalized()
+	return Vector2.LEFT if $Sprite2D.flip_h else Vector2.RIGHT
+
+
 func take_damage(damage_taken: int, source_pos: Vector2 = Vector2.INF) -> void:
 	if _invulnerable or state == State.DEAD or _is_respawning or _is_dashing:
 		return
 	_player_data.take_damage(damage_taken)
 	if _player_data.hitpoints <= 0:
-		_play_sfx(SWORD_SLICE_SFX)
+		Sfx.play("sword_slice")
 	else:
-		_play_sfx(NORMAL_ENEMY_HIT_SFX)
+		Sfx.play("hit")
 	_flash_hurt()
 	_shake_camera()
 	_apply_knockback(source_pos)
@@ -261,6 +278,8 @@ func _flash_hurt() -> void:
 
 
 func _shake_camera(strength: float = 6.0, duration: float = 0.18) -> void:
+	if not SaveData.screen_shake_enabled():
+		return
 	var camera := $Camera2D as Camera2D
 	if camera == null:
 		return
@@ -271,17 +290,6 @@ func _shake_camera(strength: float = 6.0, duration: float = 0.18) -> void:
 		var offset := Vector2(randf_range(-1, 1), randf_range(-1, 1)) * strength * fade
 		tween.tween_property(camera, "offset", offset, duration / steps)
 	tween.tween_property(camera, "offset", Vector2.ZERO, duration / steps)
-
-
-func _play_sfx(stream: AudioStream) -> void:
-	if stream == null:
-		return
-	var sfx_player := AudioStreamPlayer.new()
-	sfx_player.stream = stream
-	sfx_player.bus = "sfx"
-	add_child(sfx_player)
-	sfx_player.finished.connect(sfx_player.queue_free)
-	sfx_player.play()
 
 
 func _on_player_data_hp_changed(new_hp: int, max_hp: int) -> void:
@@ -359,14 +367,14 @@ func _on_hit_box_area_entered(area: Area2D) -> void:
 		target.take_damage(attack_damage, global_position)
 		var is_fatal: bool = is_instance_valid(target) and "hitpoints" in target and target.hitpoints <= 0
 		if is_fatal:
-			_play_sfx(SWORD_SLICE_SFX)
+			Sfx.play("sword_slice")
 			# Killing blow: bigger shake to sell the kill (hitstop is fired by
 			# the enemy's own death() via the Juice autoload).
 			_shake_camera(10.0, 0.28)
 		elif "is_large_enemy" in target and target.is_large_enemy:
-			_play_sfx(LARGE_ENEMY_HIT_SFX)
+			Sfx.play("hit_large")
 			_shake_camera(5.0, 0.16)
 		else:
-			_play_sfx(NORMAL_ENEMY_HIT_SFX)
+			Sfx.play("hit")
 			# Light impact feedback on every connecting hit.
 			_shake_camera(3.0, 0.12)

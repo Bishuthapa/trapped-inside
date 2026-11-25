@@ -13,7 +13,7 @@ enum State {
 @export var attack_damage: int = 30
 @export var attack_speed: float = 1.0
 @export var hitpoints:int = 180
-@export var max_hitpoints: int = 180
+@export var max_hitpoints: int = 360
 @export var aggro_range: float = 650.0
 @export var attack_range: float = 80.0
 @export var knockback_force: float = 420.0
@@ -81,6 +81,19 @@ func _get_effects_node() -> Node2D:
 			return effects
 		node = node.get_parent()
 	return null
+
+
+func scale_stats(hp_mult: float, dmg_mult: float) -> void:
+	# Linear difficulty scaling, applied ONCE at spawn on top of the scene's
+	# hand-tuned base stats. Multiplies, never replaces — so authored balance
+	# stays the reference point. Call after the node is in the tree (its
+	# _ready() has already set hitpoints = max_hitpoints and the health bar).
+	max_hitpoints = int(round(max_hitpoints * hp_mult))
+	hitpoints = max_hitpoints
+	attack_damage = int(round(attack_damage * dmg_mult))
+	if health_bar:
+		health_bar.max_value = max_hitpoints
+		health_bar.value = hitpoints
 
 
 func configure_as_boss(extra_hp: int = 200, scale_factor: float = 1.3, extra_damage: int = 0) -> void:
@@ -289,13 +302,7 @@ func _telegraph_attack() -> void:
 func _play_attack_sfx() -> void:
 	if attack_sfx == null:
 		return
-	var sfx_player := AudioStreamPlayer2D.new()
-	sfx_player.stream = attack_sfx
-	sfx_player.bus = "sfx"
-	get_tree().current_scene.add_child(sfx_player)
-	sfx_player.global_position = global_position
-	sfx_player.finished.connect(sfx_player.queue_free)
-	sfx_player.play()
+	Sfx.play_stream(attack_sfx, global_position)
 
 
 func death() -> void:
@@ -324,8 +331,12 @@ func _maybe_drop_heart(effects: Node2D, drop_pos: Vector2) -> void:
 	if randf() >= heart_drop_chance:
 		return
 	var heart := HEART_PICKUP_SCENE.instantiate() as Area2D
-	effects.add_child(heart)
+	# death() runs inside the player's HitBox area_entered callback (mid
+	# physics-query flush) — adding an Area2D/CollisionShape2D to the tree
+	# synchronously here throws "Can't change this state while flushing
+	# queries." Defer the add so it happens after the physics step ends.
 	heart.global_position = drop_pos + Vector2(0.0, -16.0)
+	effects.call_deferred("add_child", heart)
 
 
 func _trigger_kill_hitstop() -> void:

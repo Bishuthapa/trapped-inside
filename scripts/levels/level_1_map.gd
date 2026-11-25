@@ -14,9 +14,16 @@ var _enemies_remaining: int = 0
 @onready var door: Area2D = $Door
 
 
+const LEVEL_INDEX: int = 1
+
+
 func _ready() -> void:
 	_enemies_remaining = enemies_node.get_child_count()
+	var hp_mult := 1.0 + (LEVEL_INDEX - 1) * 0.15
+	var dmg_mult := 1.0 + (LEVEL_INDEX - 1) * 0.10
 	for enemy in enemies_node.get_children():
+		if enemy.has_method("scale_stats"):
+			enemy.scale_stats(hp_mult, dmg_mult)
 		if enemy.has_signal("died"):
 			enemy.died.connect(_on_enemy_died)
 	call_deferred("_emit_initial_objective")

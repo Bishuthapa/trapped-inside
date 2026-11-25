@@ -19,6 +19,7 @@ const BOSS_EXTRA_HP: int = 500
 const BOSS_SCALE: float = 1.6
 const BOSS_EXTRA_DAMAGE: int = 45
 const WAVE_DELAY: float = 1.5
+const LEVEL_INDEX: int = 3
 
 @onready var enemies_node: Node = $Enemies
 
@@ -121,6 +122,10 @@ func _spawn_enemy(enemy_scene: PackedScene, spawn_index: int) -> void:
 	enemy.spawn_point = enemy.global_position
 	# Survival arena: waves should always hunt the player, never lose aggro.
 	enemy.aggro_range = 100000.0
+	# Linear per-wave difficulty ramp: wave 1 = 1.0x, wave 2 = 1.12x, ...
+	var wave_mult := 1.0 + _wave_index * 0.12
+	if enemy.has_method("scale_stats"):
+		enemy.scale_stats(wave_mult, wave_mult)
 	if enemy.has_signal("died"):
 		enemy.died.connect(_on_enemy_died)
 

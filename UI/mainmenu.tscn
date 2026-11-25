@@ -446,10 +446,10 @@ grow_horizontal = 2
 theme_override_constants/line_spacing = 16
 theme_override_fonts/font = ExtResource("5_81nvf")
 theme_override_font_sizes/font_size = 38
-text = "WASD  —  Move
-Left Mouse  —  Attack (aim with cursor)
-Space  —  Dash (brief dodge, i-frames)
-Esc  —  Pause
+text = "WASD / Left stick  —  Move
+Left Mouse / X / RT  —  Attack (aim with cursor or right stick)
+Space / A / RB  —  Dash (brief dodge, i-frames)
+Esc / Start  —  Pause
 
 Goal:  Clear every enemy wave, grab the key,
 reach the door.  Grab green crosses to heal.

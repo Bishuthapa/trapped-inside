@@ -9,7 +9,7 @@ func kill_hitstop(scale: float = 0.15, real_duration: float = 0.09) -> void:
 	# Brief slow-mo punch on a kill. Real-time timer so it always recovers,
 	# and living here means the dying enemy freeing itself can't strand
 	# Engine.time_scale below 1.
-	if _hitstop_active:
+	if _hitstop_active or not SaveData.hitstop_enabled():
 		return
 	_hitstop_active = true
 	Engine.time_scale = scale

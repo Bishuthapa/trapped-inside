@@ -39,6 +39,7 @@ func _begin_game() -> void:
 	await get_tree().process_frame
 
 	_player_data.reset_for_new_game()
+	SaveData.record_run_started()
 	current_game = game_scene_packed.instantiate()
 	add_child(current_game)
 

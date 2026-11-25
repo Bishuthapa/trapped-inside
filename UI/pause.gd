@@ -6,13 +6,16 @@ signal restart_requested
 func _ready():
 	add_to_group("pause_menu")
 	visible = false
-	process_mode = Node.PROCESS_MODE_ALWAYS  
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	UIFocus.setup(self)
 
 func toggle_pause():
 	var is_paused = get_tree().paused
 	
 	get_tree().paused = !is_paused
 	visible = !is_paused
+	if visible:
+		UIFocus.focus_first(self)
 
 func _on_resume_pressed() -> void:
 	$VBoxContainer/resume/click.play()

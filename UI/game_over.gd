@@ -6,6 +6,8 @@ signal return_to_menu_pressed()
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_populate_stats()
+	UIFocus.setup(self)
+	UIFocus.focus_first.call_deferred(self)
 
 
 func _populate_stats() -> void:
