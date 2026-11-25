@@ -12,8 +12,8 @@ enum State {
 @export var speed: int = 128
 @export var attack_damage: int = 30
 @export var attack_speed: float = 1.0
-@export var hitpoints:int = 180
-@export var max_hitpoints: int = 360
+@export var hitpoints:int = 240
+@export var max_hitpoints: int = 240  # 4 light hits / one full combo (see docs/Balance.md)
 @export var aggro_range: float = 650.0
 @export var attack_range: float = 80.0
 @export var knockback_force: float = 420.0
@@ -96,7 +96,7 @@ func scale_stats(hp_mult: float, dmg_mult: float) -> void:
 		health_bar.value = hitpoints
 
 
-func configure_as_boss(extra_hp: int = 200, scale_factor: float = 1.3, extra_damage: int = 0) -> void:
+func configure_as_boss(extra_hp: int = 400, scale_factor: float = 1.3, extra_damage: int = 0) -> void:
 	max_hitpoints += extra_hp
 	hitpoints = max_hitpoints
 	health_bar.max_value = max_hitpoints
@@ -268,6 +268,12 @@ func take_damage(damage_taken: int, source_pos: Vector2 = Vector2.INF) -> void:
 		death()
 
 
+func boost_knockback(mult: float) -> void:
+	# Called by the player's combo finisher right after take_damage().
+	_knockback_velocity *= mult
+	_knockback_time *= 1.4
+
+
 func _apply_knockback(source_pos: Vector2) -> void:
 	if source_pos == Vector2.INF:
 		return
@@ -353,4 +359,4 @@ func _register_kill() -> void:
 
 func _on_hit_box_area_entered(area: Area2D) -> void:
 	if area.owner and area.owner.has_method("take_damage"):
-		area.owner.take_damage(attack_damage)
+		area.owner.take_damage(attack_damage, global_position)
