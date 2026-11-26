@@ -2,6 +2,7 @@ extends Node2D
 
 signal completed()
 signal objective_changed(text: String)
+signal room_cleared()  # gamescene shows the upgrade picker
 
 const ENEMY_SCENE: PackedScene = preload("res://scenes/enemies/enemy.tscn")
 const GOBLIN_SCENE: PackedScene = preload("res://scenes/enemies/Goblin.tscn")
@@ -151,7 +152,9 @@ func _on_wave_cleared() -> void:
 
 	if _wave_index <= WAVES.size():
 		objective_changed.emit("Wave cleared — next wave incoming")
-		await get_tree().create_timer(WAVE_DELAY).timeout
+		room_cleared.emit()
+		# process_always = false: the delay waits while the upgrade picker pauses the game.
+		await get_tree().create_timer(WAVE_DELAY, false).timeout
 		_start_next_wave()
 		return
 

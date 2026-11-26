@@ -15,7 +15,7 @@ func _ready() -> void:
 	_player_data.hp_changed.connect(_on_player_data_hp_changed)
 	_player_data.kills_changed.connect(update_kills)
 	update_lives(_player_data.lives)
-	_on_player_data_hp_changed(_player_data.hitpoints, _player_data.MAX_HP)
+	_on_player_data_hp_changed(_player_data.hitpoints, _player_data.max_hp)
 	update_kills(_player_data.enemies_killed)
 	update_objective("Explore the area")
 	%AttackCooldownBar.value = 100.0

@@ -18,6 +18,11 @@ const LIBRARY: Dictionary = {
 }
 
 
+func _ready() -> void:
+	# Keep sounds working in paused screens (pause menu, upgrade picker).
+	process_mode = Node.PROCESS_MODE_ALWAYS
+
+
 func play(sound_name: String, world_pos: Vector2 = Vector2.INF, jitter: bool = true) -> void:
 	var stream: AudioStream = LIBRARY.get(sound_name)
 	if stream == null:

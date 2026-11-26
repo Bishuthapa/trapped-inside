@@ -26,7 +26,7 @@ New best time!"
 			@warning_ignore("integer_division")
 			text += "
 Best: %d:%02d" % [int(best) / 60, int(best) % 60]
-	stats.text = text
+	stats.text = text + _run_summary()
 
 
 func _on_main_menu_pressed() -> void:
@@ -35,3 +35,8 @@ func _on_main_menu_pressed() -> void:
 
 func _on_restart_pressed() -> void:
 	restart_pressed.emit()
+
+func _run_summary() -> String:
+	var titles: Array[String] = RunState.picked_titles()
+	var upgrades := ", ".join(titles) if not titles.is_empty() else "none"
+	return "\nUpgrades: %s\nSeed: %d" % [upgrades, RunState.run_seed]

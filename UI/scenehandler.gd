@@ -40,6 +40,7 @@ func _begin_game() -> void:
 
 	_player_data.reset_for_new_game()
 	SaveData.record_run_started()
+	RunState.start_run()
 	current_game = game_scene_packed.instantiate()
 	add_child(current_game)
 

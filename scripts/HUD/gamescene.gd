@@ -3,6 +3,7 @@ extends Node2D
 const GAME_OVER_SCENE: PackedScene = preload("res://UI/game_over.tscn")
 const GAME_COMPLETE_SCENE: PackedScene = preload("res://UI/game_complete.tscn")
 const LOADING_SCENE: PackedScene = preload("res://UI/LoadingScene.tscn")
+const UPGRADE_PICKER_SCRIPT: Script = preload("res://UI/upgrade_picker.gd")
 const TRANSITION_DURATION: float = 3.0
 
 const LOADING_MESSAGES: Dictionary = {
@@ -20,6 +21,7 @@ var _is_loading: bool = false
 var _game_over_ui: CanvasLayer
 var _game_complete_ui: CanvasLayer
 var _loading_ui: CanvasLayer
+var _upgrade_picker: CanvasLayer
 
 
 func _ready() -> void:
@@ -27,6 +29,7 @@ func _ready() -> void:
 	_start_game_music()
 	_player_data.game_over.connect(_on_game_over)
 	current_level = _find_level_node()
+	_make_pausable(current_level)
 	_apply_floor_tint(current_level)
 	_record_level_reached()
 	_connect_player_to_hud()
@@ -87,6 +90,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _game_complete_ui and is_instance_valid(_game_complete_ui):
 		return
+	if _upgrade_picker and is_instance_valid(_upgrade_picker):
+		return
 	if not (event.is_action_pressed("escape") or event.is_action_pressed("ui_cancel")):
 		return
 	if _pause_menu.has_method("toggle_pause"):
@@ -137,6 +142,7 @@ func _swap_level(level_scene_path: String) -> void:
 		return
 
 	current_level = level_scene.instantiate()
+	_make_pausable(current_level)
 	add_child(current_level)
 	move_child(current_level, 0)
 	_apply_floor_tint(current_level)
@@ -165,6 +171,14 @@ func _fetch_level_scene(level_scene_path: String) -> PackedScene:
 
 	push_error("Threaded load failed for: %s" % level_scene_path)
 	return load(level_scene_path) as PackedScene
+
+
+func _make_pausable(level: Node) -> void:
+	# GameScene runs with PROCESS_MODE_ALWAYS so its menus work while paused.
+	# The level (player, enemies, hazards) would inherit that and keep running,
+	# so mark it PAUSABLE: get_tree().paused then really freezes gameplay.
+	if level:
+		level.process_mode = Node.PROCESS_MODE_PAUSABLE
 
 
 func _find_level_node() -> Node2D:
@@ -201,10 +215,32 @@ func _connect_level_events() -> void:
 		var objective_cb := Callable(HUD, "update_objective")
 		if not current_level.is_connected("objective_changed", objective_cb):
 			current_level.connect("objective_changed", HUD.update_objective)
+	if current_level.has_signal("room_cleared"):
+		var cleared_cb := Callable(self, "_on_room_cleared")
+		if not current_level.is_connected("room_cleared", cleared_cb):
+			current_level.connect("room_cleared", cleared_cb)
 	if current_level.has_signal("completed"):
 		var completed_cb := Callable(self, "_on_level_completed")
 		if not current_level.is_connected("completed", completed_cb):
 			current_level.connect("completed", completed_cb)
+
+
+func _on_room_cleared() -> void:
+	if _upgrade_picker and is_instance_valid(_upgrade_picker):
+		return
+	if (_game_over_ui and is_instance_valid(_game_over_ui)) or (_game_complete_ui and is_instance_valid(_game_complete_ui)):
+		return
+	_pause_menu.visible = false
+	get_tree().paused = true
+	_upgrade_picker = CanvasLayer.new()
+	_upgrade_picker.set_script(UPGRADE_PICKER_SCRIPT)
+	_upgrade_picker.closed.connect(_on_upgrade_picked)
+	$UI.add_child(_upgrade_picker)
+
+
+func _on_upgrade_picked(_upgrade: UpgradeData) -> void:
+	_upgrade_picker = null
+	get_tree().paused = false
 
 
 func _on_game_over() -> void:

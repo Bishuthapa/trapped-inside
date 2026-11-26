@@ -38,6 +38,7 @@ const PERFECT_DODGE_WINDOW: float = 0.12
 const PERFECT_DODGE_SLOWMO: float = 0.35
 const PERFECT_DODGE_SLOWMO_TIME: float = 0.35  # real seconds
 const EMPOWER_MULT: float = 1.5
+const CRIT_MULT: float = 2.0
 const EMPOWER_TIME: float = 2.0
 const EMPOWER_COLOR: Color = Color(0.7, 1.3, 1.5)
 const HURT_FLASH_COLOR: Color = Color(1.5, 0.5, 0.5)
@@ -45,8 +46,8 @@ const DEATH_SCENE: PackedScene = preload("res://assets/effects/death.tscn")
 
 var state: State = State.IDLE
 var move_direction: Vector2 = Vector2.ZERO
-var hitpoints: int = PlayerDataService.MAX_HP
-var hitpoint_max: int = PlayerDataService.MAX_HP
+var hitpoints: int = PlayerDataService.BASE_MAX_HP
+var hitpoint_max: int = PlayerDataService.BASE_MAX_HP
 
 var spawn_position: Vector2
 var _is_respawning: bool = false
@@ -77,7 +78,7 @@ var _perfect_dodge_used: bool = false
 
 func _ready() -> void:
 	spawn_position = global_position
-	hitpoint_max = _player_data.MAX_HP
+	hitpoint_max = _player_data.max_hp
 	sync_from_player_data()
 	animation_tree.active = true
 	if not _player_data.hp_changed.is_connected(_on_player_data_hp_changed):
@@ -88,7 +89,7 @@ func _ready() -> void:
 
 func sync_from_player_data() -> void:
 	hitpoints = _player_data.hitpoints
-	hitpoint_max = _player_data.MAX_HP
+	hitpoint_max = _player_data.max_hp
 	_emit_hp_bar()
 
 
@@ -173,7 +174,7 @@ func _update_cooldowns(delta: float) -> void:
 	if _dash_cooldown_left > 0.0:
 		_dash_was_on_cooldown = true
 		_dash_cooldown_left = maxf(_dash_cooldown_left - delta, 0.0)
-		dash_cooldown_changed.emit(1.0 - _dash_cooldown_left / dash_cooldown)
+		dash_cooldown_changed.emit(1.0 - _dash_cooldown_left / _dash_cooldown_total())
 	elif _dash_was_on_cooldown:
 		_dash_was_on_cooldown = false
 		dash_cooldown_changed.emit(1.0)
@@ -183,7 +184,7 @@ func movement_loop() -> void:
 	# get_vector gives analog stick values and already normalizes keyboard diagonals.
 	move_direction = Input.get_vector("left", "right", "up", "down")
 
-	var motion: Vector2 = move_direction * speed
+	var motion: Vector2 = move_direction * speed * RunState.mod("move_speed_mult")
 	velocity = motion
 	move_and_slide()
 
@@ -244,7 +245,7 @@ func _end_dash() -> void:
 	_is_dashing = false
 	_invulnerable = false
 	velocity = Vector2.ZERO
-	_dash_cooldown_left = dash_cooldown
+	_dash_cooldown_left = _dash_cooldown_total()
 	_dash_was_on_cooldown = true
 	dash_cooldown_changed.emit(0.0)
 
@@ -271,7 +272,7 @@ func _start_swing() -> void:
 	_attack_buffered = false
 	_swing_hit_targets.clear()
 	state = State.ATTACK
-	var time_scale: float = COMBO_TIME_SCALES[_combo_step]
+	var time_scale: float = COMBO_TIME_SCALES[_combo_step] * RunState.mod("attack_speed_mult")
 	_swing_length = ATTACK_ANIM_LENGTH / time_scale
 	_swing_time_left = _swing_length
 
@@ -280,6 +281,8 @@ func _start_swing() -> void:
 	animation_tree.set("parameters/attack/BlendSpace2D/blend_position", attack_dir)
 	animation_tree.set("parameters/attack/TimeScale/scale", time_scale)
 	animation_playback.start("attack", true)
+	# Whirlwind upgrade: bigger hitbox on the finisher only.
+	$HitBox.scale = Vector2.ONE * (RunState.mod("finisher_area_mult") if _is_finisher() else 1.0)
 
 	# Small step into the swing; bigger on the finisher.
 	move_and_collide(attack_dir * COMBO_LUNGE[_combo_step])
@@ -327,6 +330,10 @@ func _return_to_locomotion() -> void:
 	update_animation()
 
 
+func _dash_cooldown_total() -> float:
+	return dash_cooldown * maxf(RunState.mod("dash_cooldown_mult"), 0.2)
+
+
 func _is_finisher() -> bool:
 	return _combo_step == COMBO_TIME_SCALES.size() - 1
 
@@ -361,7 +368,8 @@ func take_damage(damage_taken: int, source_pos: Vector2 = Vector2.INF) -> void:
 
 func _try_perfect_dodge() -> void:
 	# Only the first PERFECT_DODGE_WINDOW seconds of a dash count, once per dash.
-	if _perfect_dodge_used or (dash_duration - _dash_time_left) > PERFECT_DODGE_WINDOW:
+	var window := PERFECT_DODGE_WINDOW + RunState.mod("perfect_window_bonus")
+	if _perfect_dodge_used or (dash_duration - _dash_time_left) > window:
 		return
 	_perfect_dodge_used = true
 	_attack_cooldown_left = 0.0
@@ -490,11 +498,14 @@ func _on_hit_box_area_entered(area: Area2D) -> void:
 
 	var finisher := _is_finisher()
 	var empowered := _empowered_time_left > 0.0
-	var damage := float(attack_damage)
+	var crit := RunState.roll_crit()
+	var damage := float(attack_damage) * RunState.mod("damage_mult")
 	if finisher:
-		damage *= FINISHER_MULT
+		damage *= FINISHER_MULT + RunState.mod("finisher_mult_bonus")
 	if empowered:
-		damage *= EMPOWER_MULT
+		damage *= EMPOWER_MULT + RunState.mod("empower_mult_bonus")
+	if crit:
+		damage *= CRIT_MULT
 	var dmg := int(round(damage))
 
 	var target_pos: Vector2 = (target as Node2D).global_position if target is Node2D else global_position
@@ -508,12 +519,21 @@ func _on_hit_box_area_entered(area: Area2D) -> void:
 		_set_empowered_visual(false)
 
 	var hit_dir := (target_pos - global_position).normalized()
-	var color := Juice.COLOR_CRIT if empowered else (Juice.COLOR_HEAVY if finisher else Juice.COLOR_NORMAL)
-	Juice.damage_number(target_pos, dmg, color, finisher or empowered)
+	var color := Juice.COLOR_NORMAL
+	if finisher:
+		color = Juice.COLOR_HEAVY
+	if crit:
+		color = Juice.COLOR_LUCKY
+	if empowered:
+		color = Juice.COLOR_CRIT
+	Juice.damage_number(target_pos, dmg, color, finisher or empowered or crit)
 	Juice.hit_burst(target_pos, hit_dir, color, 16 if finisher else 9)
 
 	var is_fatal: bool = is_instance_valid(target) and "hitpoints" in target and target.hitpoints <= 0
 	if is_fatal:
+		var heal := int(RunState.mod("heal_on_kill"))
+		if heal > 0:
+			_player_data.heal(heal)
 		Sfx.play("sword_slice")
 		# Killing blow: bigger shake to sell the kill (hitstop is fired by
 		# the enemy's own death() via the Juice autoload).

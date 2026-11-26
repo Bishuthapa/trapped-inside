@@ -334,7 +334,7 @@ func death() -> void:
 
 
 func _maybe_drop_heart(effects: Node2D, drop_pos: Vector2) -> void:
-	if randf() >= heart_drop_chance:
+	if randf() >= heart_drop_chance + RunState.mod("heart_drop_bonus"):
 		return
 	var heart := HEART_PICKUP_SCENE.instantiate() as Area2D
 	# death() runs inside the player's HitBox area_entered callback (mid

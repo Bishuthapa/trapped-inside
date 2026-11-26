@@ -88,11 +88,14 @@ daily-seed mode is possible later.
 - [ ] Shield enemy, multi-phase bosses
 
 ### M2 — Run structure (the roguelite itself)
-- [ ] `RunState`, `PlayerStats`, `UpgradeData`
-- [ ] `RoomTemplate` + split existing maps into 8–10 rooms
+- [x] `RunState` autoload: seed, picked upgrades, stat modifiers (player reads them directly, no separate `PlayerStats`)
+- [x] `UpgradeData` + `UpgradeCatalog` (13 upgrades, defined in code in `global/upgrade_catalog.gd`)
+- [x] Upgrade picker after each cleared room/wave: 3 cards, 1 reroll, mouse/keys/gamepad
+- [x] Seeded runs; seed and upgrades shown on the end screens
+- [ ] `RoomTemplate` + split existing maps into 8–10 rooms (needs room scenes built in the editor)
 - [ ] `RoomDirector` with seeded room order
-- [ ] Upgrade picker UI after each room (~12 upgrades to start)
 - [ ] Floor transitions + mini-boss per floor
+- [ ] HUD list of current upgrades
 
 ### M3 — Meta + identity
 - [ ] Hub cell scene, bones currency, unlock shop
