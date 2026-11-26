@@ -3,6 +3,7 @@ extends Node2D
 const GAME_OVER_SCENE: PackedScene = preload("res://UI/game_over.tscn")
 const GAME_COMPLETE_SCENE: PackedScene = preload("res://UI/game_complete.tscn")
 const LOADING_SCENE: PackedScene = preload("res://UI/LoadingScene.tscn")
+const UPGRADE_PICKER_SCRIPT: Script = preload("res://UI/upgrade_picker.gd")
 const TRANSITION_DURATION: float = 3.0
 
 const LOADING_MESSAGES: Dictionary = {
@@ -20,6 +21,7 @@ var _is_loading: bool = false
 var _game_over_ui: CanvasLayer
 var _game_complete_ui: CanvasLayer
 var _loading_ui: CanvasLayer
+var _upgrade_picker: CanvasLayer
 
 
 func _ready() -> void:
@@ -86,6 +88,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _game_over_ui and is_instance_valid(_game_over_ui):
 		return
 	if _game_complete_ui and is_instance_valid(_game_complete_ui):
+		return
+	if _upgrade_picker and is_instance_valid(_upgrade_picker):
 		return
 	if not (event.is_action_pressed("escape") or event.is_action_pressed("ui_cancel")):
 		return
@@ -201,10 +205,32 @@ func _connect_level_events() -> void:
 		var objective_cb := Callable(HUD, "update_objective")
 		if not current_level.is_connected("objective_changed", objective_cb):
 			current_level.connect("objective_changed", HUD.update_objective)
+	if current_level.has_signal("room_cleared"):
+		var cleared_cb := Callable(self, "_on_room_cleared")
+		if not current_level.is_connected("room_cleared", cleared_cb):
+			current_level.connect("room_cleared", cleared_cb)
 	if current_level.has_signal("completed"):
 		var completed_cb := Callable(self, "_on_level_completed")
 		if not current_level.is_connected("completed", completed_cb):
 			current_level.connect("completed", completed_cb)
+
+
+func _on_room_cleared() -> void:
+	if _upgrade_picker and is_instance_valid(_upgrade_picker):
+		return
+	if (_game_over_ui and is_instance_valid(_game_over_ui)) or (_game_complete_ui and is_instance_valid(_game_complete_ui)):
+		return
+	_pause_menu.visible = false
+	get_tree().paused = true
+	_upgrade_picker = CanvasLayer.new()
+	_upgrade_picker.set_script(UPGRADE_PICKER_SCRIPT)
+	_upgrade_picker.closed.connect(_on_upgrade_picked)
+	$UI.add_child(_upgrade_picker)
+
+
+func _on_upgrade_picked(_upgrade: UpgradeData) -> void:
+	_upgrade_picker = null
+	get_tree().paused = false
 
 
 func _on_game_over() -> void:

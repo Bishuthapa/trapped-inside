@@ -9,6 +9,7 @@ const NUMBER_FONT: FontFile = preload("res://UI/PirataOne-Regular.ttf")
 const COLOR_NORMAL: Color = Color(1.0, 0.95, 0.85)
 const COLOR_HEAVY: Color = Color(1.0, 0.65, 0.2)
 const COLOR_CRIT: Color = Color(0.45, 0.95, 1.0)
+const COLOR_LUCKY: Color = Color(1.0, 0.9, 0.3)
 const COLOR_PLAYER_HURT: Color = Color(1.0, 0.3, 0.3)
 
 var _time_scale_active: bool = false

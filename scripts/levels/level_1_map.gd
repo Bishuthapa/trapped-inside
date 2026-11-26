@@ -1,6 +1,7 @@
 extends Node2D
 
 signal objective_changed(text: String)
+signal room_cleared()  # gamescene shows the upgrade picker
 
 const KEY_SCENE: PackedScene = preload("res://effects/key/key.tscn")
 
@@ -42,6 +43,7 @@ func _on_enemy_died(pos: Vector2) -> void:
 		return
 
 	call_deferred("_spawn_key")
+	room_cleared.emit.call_deferred()
 
 
 func _spawn_key() -> void:

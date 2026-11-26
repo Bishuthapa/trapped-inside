@@ -26,6 +26,7 @@ AudioSettings="*res://global/audiosettings.gd"
 Juice="*res://global/juice.gd"
 SaveData="*res://global/savedata.gd"
 Sfx="*res://global/sfx.gd"
+RunState="*res://global/runstate.gd"
 
 [display]
 
