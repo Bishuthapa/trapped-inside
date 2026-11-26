@@ -29,6 +29,7 @@ func _ready() -> void:
 	_start_game_music()
 	_player_data.game_over.connect(_on_game_over)
 	current_level = _find_level_node()
+	_make_pausable(current_level)
 	_apply_floor_tint(current_level)
 	_record_level_reached()
 	_connect_player_to_hud()
@@ -141,6 +142,7 @@ func _swap_level(level_scene_path: String) -> void:
 		return
 
 	current_level = level_scene.instantiate()
+	_make_pausable(current_level)
 	add_child(current_level)
 	move_child(current_level, 0)
 	_apply_floor_tint(current_level)
@@ -169,6 +171,14 @@ func _fetch_level_scene(level_scene_path: String) -> PackedScene:
 
 	push_error("Threaded load failed for: %s" % level_scene_path)
 	return load(level_scene_path) as PackedScene
+
+
+func _make_pausable(level: Node) -> void:
+	# GameScene runs with PROCESS_MODE_ALWAYS so its menus work while paused.
+	# The level (player, enemies, hazards) would inherit that and keep running,
+	# so mark it PAUSABLE: get_tree().paused then really freezes gameplay.
+	if level:
+		level.process_mode = Node.PROCESS_MODE_PAUSABLE
 
 
 func _find_level_node() -> Node2D:
